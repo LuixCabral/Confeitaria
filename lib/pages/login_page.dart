@@ -1,5 +1,5 @@
-import 'package:app_confeitaria/responsive/desktop_body.dart';
-import 'package:app_confeitaria/responsive/mobile_body.dart';
+import 'package:app_confeitaria/responsive/login/login_desktop_body.dart';
+import 'package:app_confeitaria/responsive/login/login_mobile_body.dart';
 import 'package:app_confeitaria/responsive/responsive_layout.dart';
 import 'package:flutter/material.dart';
 
