@@ -28,8 +28,8 @@ class _LoginDesktopBodyState extends State<LoginDesktopBody> {
               Padding(
                 padding: const EdgeInsets.all(10.0),
                 child: Container(
-                  height: 450,
-                  width: 350,
+                  height: 500,
+                  width: 375,
                   decoration: BoxDecoration(
                     color: Colors.white,
                     border: Border.all(color: Colors.grey),
