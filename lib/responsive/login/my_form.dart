@@ -1,19 +1,27 @@
 import 'package:flutter/material.dart';
 
-class LoginDesktopBody extends StatefulWidget {
-  const LoginDesktopBody({super.key});
+class MyForm extends StatefulWidget {
+  const MyForm({super.key});
 
   @override
-  State<LoginDesktopBody> createState() => _LoginDesktopBodyState();
+  State<MyForm> createState() => _MyFormState();
 }
 
-class _LoginDesktopBodyState extends State<LoginDesktopBody> {
+class _MyFormState extends State<MyForm> {
+  final emaileditor = TextEditingController();
+  final passwordEditor = TextEditingController();
   bool _rememberMe = false;
 
   void _toggleRememberMe(bool? value) {
     setState(() {
       _rememberMe = value ?? false;
     });
+  }
+
+  void dispose(){
+    emaileditor.dispose();
+    passwordEditor.dispose();
+    super.dispose();
   }
   @override
   Widget build(BuildContext context) {
@@ -26,26 +34,27 @@ class _LoginDesktopBodyState extends State<LoginDesktopBody> {
             mainAxisAlignment: MainAxisAlignment.start,
             children: [
               Padding(
-                padding: const EdgeInsets.all(10.0),
+                padding: EdgeInsets.all(8.0),
                 child: Container(
                   height: 500,
                   width: 375,
                   decoration: BoxDecoration(
                     color: Colors.white,
-                    border: Border.all(color: Colors.grey),
-                    borderRadius: BorderRadius.circular(10),
+                    border: Border.all(color:Colors.grey),
+                    borderRadius: BorderRadius.circular(10)
                   ),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.center,
                     children: [
-                      const SizedBox(height: 24),
-                      const Text(
-                        'Bem Vindo!!',
-                        style: TextStyle(
-                          color: Colors.deepPurpleAccent,
-                          fontSize: 22,
-                          fontWeight: FontWeight.bold,
-                        ),
+                      SizedBox(
+                        height: 24,
+                      ),
+                      const Text('Bem Vindo!!',
+                      style: TextStyle(
+                        color: Colors.deepPurpleAccent,
+                        fontSize: 22,
+                        fontWeight: FontWeight.bold,
+                      ),
                       ),
                       const SizedBox(height: 32),
                       Padding(
@@ -54,6 +63,7 @@ class _LoginDesktopBodyState extends State<LoginDesktopBody> {
                           horizontal: 25.0,
                         ),
                         child: TextField(
+                          controller: emaileditor,
                           decoration: InputDecoration(
                             labelText: 'Email',
                             border: OutlineInputBorder(),
@@ -69,6 +79,7 @@ class _LoginDesktopBodyState extends State<LoginDesktopBody> {
                           horizontal: 25.0,
                         ),
                         child: TextField(
+                          controller: passwordEditor,
                           decoration: InputDecoration(
                             labelText: 'Senha',
                             border: OutlineInputBorder(),
@@ -120,9 +131,9 @@ class _LoginDesktopBodyState extends State<LoginDesktopBody> {
                 ),
               ),
             ],
-          ),
+          )
         ],
       ),
-    );
+      );
   }
 }
