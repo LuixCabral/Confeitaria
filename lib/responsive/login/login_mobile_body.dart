@@ -29,32 +29,31 @@ class _LoginMobileBodyState extends State<LoginMobileBody> {
               Padding(
                 padding: const EdgeInsets.all(10.0),
                 child: Container(
-                  height: 550,
+                  height: 450,
                   width: 350,
                   decoration: BoxDecoration(
                     color: Colors.white,
-                    border: Border.all(
-                      color: Colors.grey,
-                    ),
+                    border: Border.all(color: Colors.grey),
                     borderRadius: BorderRadius.circular(10),
                   ),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.center,
                     children: [
-                      // O texto "Login" fica próximo ao topo da caixa
                       const SizedBox(height: 24),
                       const Text(
-                        'Login',
+                        'Bem Vindo!!',
                         style: TextStyle(
-                          color: Colors.black,
+                          color: Colors.deepPurpleAccent,
                           fontSize: 22,
                           fontWeight: FontWeight.bold,
                         ),
                       ),
-                      // Adicione outros widgets aqui se necessário
                       const SizedBox(height: 32),
                       Padding(
-                        padding: EdgeInsets.symmetric(vertical: 3.0, horizontal: 25.0),
+                        padding: EdgeInsets.symmetric(
+                          vertical: 3.0,
+                          horizontal: 25.0,
+                        ),
                         child: TextField(
                           decoration: InputDecoration(
                             labelText: 'Email',
@@ -66,7 +65,10 @@ class _LoginMobileBodyState extends State<LoginMobileBody> {
                       ),
                       const SizedBox(height: 16),
                       Padding(
-                        padding: EdgeInsets.symmetric(vertical: 3.0, horizontal:25.0),
+                        padding: EdgeInsets.symmetric(
+                          vertical: 3.0,
+                          horizontal: 25.0,
+                        ),
                         child: TextField(
                           decoration: InputDecoration(
                             labelText: 'Senha',
@@ -90,6 +92,30 @@ class _LoginMobileBodyState extends State<LoginMobileBody> {
                           const Text('Lembrar-me'),
                         ],
                       ),
+                      // Adiciona mais espaço antes do botão
+                      const SizedBox(height: 32),
+                      SizedBox(
+                        width: 150,
+                        height: 45,
+                        child: ElevatedButton(
+                          onPressed: () {
+                            // TODO: Implement login logic here
+                          },
+                          style: ButtonStyle(
+                            shadowColor:
+                                WidgetStateProperty.all(Colors.deepPurple),
+                            shape: WidgetStateProperty.all(
+                              RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                            ),
+                          ),
+                          child: const Text(
+                            'login',
+                            style: TextStyle(fontSize: 18),
+                          ),
+                        ),
+                      )
                     ],
                   ),
                 ),
