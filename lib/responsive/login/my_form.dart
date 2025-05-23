@@ -1,3 +1,4 @@
+import 'package:app_confeitaria/pages/product_page.dart';
 import 'package:flutter/material.dart';
 
 class MyForm extends StatefulWidget {
@@ -109,7 +110,26 @@ class _MyFormState extends State<MyForm> {
                         height: 45,
                         child: ElevatedButton(
                           onPressed: () {
-                            // TODO: Implement login logic here
+                            if (emaileditor.text.isEmpty || passwordEditor.text.isEmpty) {
+                              showDialog(
+                              context: context,
+                              builder: (context) => AlertDialog(
+                                title: const Text('Erro'),
+                                content: const Text(
+                                'Por favor, preencha o email e a senha.',
+                                style: TextStyle(color: Colors.red),
+                                ),
+                                actions: [
+                                TextButton(
+                                  onPressed: () => Navigator.of(context).pop(),
+                                  child: const Text('OK'),
+                                ),
+                                ],
+                              ),
+                              );
+                            }else{
+                              Navigator.push(context, MaterialPageRoute(builder: (context) => const ProductPage()));
+                            }
                           },
                           style: ButtonStyle(
                             shadowColor:
