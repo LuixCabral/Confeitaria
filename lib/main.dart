@@ -1,8 +1,7 @@
-import 'package:app_confeitaria/pages/cart_page.dart';
-import 'package:app_confeitaria/service/CartProvider.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:app_confeitaria/pages/MainPage.dart';
+import 'package:app_confeitaria/service/CartProvider.dart';
 
 void main() {
   runApp(
@@ -24,9 +23,6 @@ class MyApp extends StatelessWidget {
         primarySwatch: Colors.pink,
       ),
       home: const MainPage(),
-      routes: {
-        '/cart': (context) => const CartPage(),
-      },
     );
   }
 }
