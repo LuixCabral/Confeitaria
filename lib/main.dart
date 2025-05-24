@@ -1,7 +1,16 @@
+import 'package:app_confeitaria/pages/cart_page.dart';
+import 'package:app_confeitaria/service/CartProvider.dart';
 import 'package:flutter/material.dart';
-import 'pages/login_page.dart';
+import 'package:provider/provider.dart';
+import 'package:app_confeitaria/pages/MainPage.dart';
+
 void main() {
-  runApp(const MyApp());
+  runApp(
+    ChangeNotifierProvider(
+      create: (context) => CartProvider(),
+      child: const MyApp(),
+    ),
+  );
 }
 
 class MyApp extends StatelessWidget {
@@ -10,12 +19,14 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      debugShowCheckedModeBanner: false,
+      title: 'Confeitaria App',
       theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
+        primarySwatch: Colors.pink,
       ),
-      home: LoginPage(),
+      home: const MainPage(),
+      routes: {
+        '/cart': (context) => const CartPage(),
+      },
     );
   }
 }
-
