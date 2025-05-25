@@ -1,4 +1,4 @@
-name: app_confeitaria
+name: "app_confeitaria"
 description: "A new Flutter project."
 # The following line prevents the package from being accidentally published to
 # pub.dev using `flutter pub publish`. This is preferred for private packages.
@@ -27,17 +27,22 @@ environment:
 # dependencies can be manually updated by changing the version numbers below to
 # the latest version available on pub.dev. To see which dependencies have newer
 # versions available, run `flutter pub outdated`.
+
+
 dependencies:
   provider: ^6.1.2
   flutter:
     sdk: flutter
-
+  mask_text_input_formatter: ^2.5.0
   # The following adds the Cupertino Icons font to your application.
   # Use with the CupertinoIcons class for iOS style icons.
   cupertino_icons: ^1.0.8
   curved_navigation_bar: ^1.0.6
   shared_preferences: ^2.5.3
-
+  sqflite: ^2.3.0
+  path: ^1.8.0
+  flutter_svg: ^2.0.7
+  http: ^1.2.0
 dev_dependencies:
   flutter_test:
     sdk: flutter

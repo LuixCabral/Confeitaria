@@ -1,9 +1,12 @@
+import 'package:app_confeitaria/service/CartProvider.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:app_confeitaria/models/Products.dart';
-import 'package:app_confeitaria/service/CartProvider.dart';
+import 'package:app_confeitaria/providers/ProductProvider.dart';
 import 'package:app_confeitaria/widgets/bottom_nav_bar.dart';
-import 'package:app_confeitaria/widgets/CartContent.dart'; // Import the new CartContent widget
+import 'package:app_confeitaria/widgets/CartContent.dart';
+import 'package:app_confeitaria/widgets/OrderStatus.dart';
+import 'package:app_confeitaria/widgets/ProfilePage.dart';
 
 class MainPage extends StatefulWidget {
   const MainPage({super.key});
@@ -14,67 +17,12 @@ class MainPage extends StatefulWidget {
 
 class _MainPageState extends State<MainPage> {
   int _currentIndex = 0;
-  String _selectedCategory = "Bolos";
+  String _selectedCategory = "Cakes";
 
-  final List<Product> _allProducts = const [
-    Product(
-      name: "Bolo Valdo",
-      price: "R\$40,00",
-      imagePath: "assets/images/bolo_valdo.jpg",
-      category: "Bolos",
-    ),
-    Product(
-      name: "Bolo de Cenoura",
-      price: "R\$30,00",
-      imagePath: "assets/images/bolo_cenoura.jpg",
-      category: "Bolos",
-    ),
-    Product(
-      name: "Red Velvet",
-      price: "R\$45,00",
-      imagePath: "assets/images/red_velvet.jpg",
-      category: "Bolos",
-    ),
-    Product(
-      name: "Torta Mineira",
-      price: "R\$10,00",
-      imagePath: "assets/images/torta_mineira.jpg",
-      category: "Tortas",
-    ),
-    Product(
-      name: "Torta de Creme",
-      price: "R\$10,00",
-      imagePath: "assets/images/torta_creme.jpg",
-      category: "Tortas",
-    ),
-    Product(
-      name: "Brownie",
-      price: "R\$10,00",
-      imagePath: "assets/images/brownie.jpg",
-      category: "Doces",
-    ),
-    Product(
-      name: "Brigadeiro",
-      price: "R\$5,00",
-      imagePath: "assets/images/brigadeiro.jpg",
-      category: "Doces",
-    ),
-    Product(
-      name: "Suco de Laranja",
-      price: "R\$8,00",
-      imagePath: "assets/images/suco_laranja.jpg",
-      category: "Drinks",
-    ),
-    Product(
-      name: "Refrigerante",
-      price: "R\$6,00",
-      imagePath: "assets/images/refrigerante.jpg",
-      category: "Drinks",
-    ),
-  ];
-
-  List<Product> get _filteredProducts {
-    return _allProducts.where((product) => product.category == _selectedCategory).toList();
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    Provider.of<ProductProvider>(context, listen: false).fetchProducts();
   }
 
   void _onTabTapped(int index) {
@@ -90,6 +38,24 @@ class _MainPageState extends State<MainPage> {
   }
 
   Widget _buildCategoryButton(String category) {
+    String displayName;
+    switch (category) {
+      case "Cakes":
+        displayName = "Bolos";
+        break;
+      case "Pies":
+        displayName = "Tortas";
+        break;
+      case "Sweets":
+        displayName = "Doces";
+        break;
+      case "Drinks":
+        displayName = "Bebidas";
+        break;
+      default:
+        displayName = category;
+    }
+
     bool isSelected = _selectedCategory == category;
     return isSelected
         ? ElevatedButton(
@@ -101,7 +67,7 @@ class _MainPageState extends State<MainPage> {
           borderRadius: BorderRadius.circular(8),
         ),
       ),
-      child: Text(category),
+      child: Text(displayName),
     )
         : OutlinedButton(
       onPressed: () => _onCategoryTapped(category),
@@ -110,149 +76,187 @@ class _MainPageState extends State<MainPage> {
           borderRadius: BorderRadius.circular(8),
         ),
       ),
-      child: Text(category),
+      child: Text(displayName),
+
     );
   }
 
   Widget _buildHomeContent() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Padding(
-          padding: const EdgeInsets.all(16.0),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                children: const [
-                  Icon(Icons.location_on, color: Colors.pink),
-                  SizedBox(width: 4),
-                  Text(
-                    "Teresina, PI",
-                    style: TextStyle(fontSize: 16, color: Colors.black54),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 8),
-              const Text(
-                "Bolos Frescos\ntodo dia",
-                style: TextStyle(
-                  fontSize: 24,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.black87,
-                ),
-              ),
-              const SizedBox(height: 16),
-              TextField(
-                decoration: InputDecoration(
-                  hintText: "Procurar",
-                  prefixIcon: const Icon(Icons.search, color: Colors.pink),
-                  filled: true,
-                  fillColor: Colors.white,
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(8),
-                    borderSide: BorderSide.none,
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ),
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 6.0),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              _buildCategoryButton("Bolos"),
-              _buildCategoryButton("Tortas"),
-              _buildCategoryButton("Doces"),
-              _buildCategoryButton("Drinks"),
-            ],
-          ),
-        ),
-        const SizedBox(height: 16),
-        Expanded(
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16.0),
-            child: _filteredProducts.isEmpty
-                ? const Center(child: Text("Nenhum produto nesta categoria"))
-                : GridView.builder(
-              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                crossAxisCount: 2,
-                crossAxisSpacing: 16,
-                mainAxisSpacing: 16,
-                childAspectRatio: 0.75,
-              ),
-              itemCount: _filteredProducts.length,
-              itemBuilder: (context, index) {
-                final product = _filteredProducts[index];
-                return Card(
-                  elevation: 2,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Expanded(
-                        child: ClipRRect(
-                          borderRadius: const BorderRadius.only(
-                            topLeft: Radius.circular(8),
-                            topRight: Radius.circular(8),
-                          ),
-                          child: Image.asset(
-                            product.imagePath,
-                            fit: BoxFit.cover,
-                            width: double.infinity,
-                            errorBuilder: (context, error, stackTrace) {
-                              return Container(
-                                color: Colors.grey[300],
-                                child: const Center(
-                                  child: Icon(Icons.image_not_supported, size: 50, color: Colors.grey),
-                                ),
-                              );
-                            },
-                          ),
-                        ),
-                      ),
-                      Padding(
-                        padding: const EdgeInsets.all(8.0),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              product.name,
-                              style: const TextStyle(
-                                fontSize: 16,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                            Text(
-                              product.price,
-                              style: const TextStyle(
-                                fontSize: 14,
-                                color: Colors.black54,
-                              ),
-                            ),
-                            const SizedBox(height: 8),
-                            Align(
-                              alignment: Alignment.centerRight,
-                              child: IconButton(
-                                onPressed: () => Provider.of<CartProvider>(context, listen: false).addToCart(product),
-                                icon: const Icon(Icons.shopping_bag_outlined, color: Colors.pink),
-                              ),
-                            ),
-                          ],
-                        ),
+    return Consumer<ProductProvider>(
+      builder: (context, productProvider, child) {
+        if (productProvider.isLoading) {
+          return const Center(child: CircularProgressIndicator());
+        }
+        if (productProvider.error != null) {
+          return Center(child: Text('Erro: ${productProvider.error}'));
+        }
+
+        final filteredProducts = productProvider.products
+            .where((product) => product.category == _selectedCategory)
+            .toList();
+
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Padding(
+              padding: const EdgeInsets.all(16.0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: const [
+                      Icon(Icons.location_on, color: Colors.pink),
+                      SizedBox(width: 4),
+                      Text(
+                        "Teresina, PI",
+                        style: TextStyle(fontSize: 16, color: Colors.black54),
                       ),
                     ],
                   ),
-                );
-              },
+                  const SizedBox(height: 8),
+                  const Text(
+                    "Bolos Frescos\ntodo dia",
+                    style: TextStyle(
+                      fontSize: 24,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.black87,
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  TextField(
+                    decoration: InputDecoration(
+                      hintText: "Procurar",
+                      prefixIcon: const Icon(Icons.search, color: Colors.pink),
+                      filled: true,
+                      fillColor: Colors.white,
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(8),
+                        borderSide: BorderSide.none,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
             ),
-          ),
-        ),
-      ],
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 6.0),
+              child: SizedBox(
+                height: 50, // Define a altura fixa para os botões
+                child: SingleChildScrollView(
+                  scrollDirection: Axis.horizontal,
+                  child: Row(
+                    children: [
+                      _buildCategoryButton("Cakes"),
+                      const SizedBox(width: 8.0),
+                      _buildCategoryButton("Pies"),
+                      const SizedBox(width: 8.0),
+                      _buildCategoryButton("Sweets"),
+                      const SizedBox(width: 8.0),
+                      _buildCategoryButton("Drinks"),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+
+            const SizedBox(height: 16),
+            Expanded(
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                child: filteredProducts.isEmpty
+                    ? const Center(child: Text("Nenhum produto nesta categoria"))
+                    : GridView.builder(
+                  gridDelegate:
+                  const SliverGridDelegateWithFixedCrossAxisCount(
+                    crossAxisCount: 2,
+                    crossAxisSpacing: 16,
+                    mainAxisSpacing: 16,
+                    childAspectRatio: 0.75,
+                  ),
+                  itemCount: filteredProducts.length,
+                  itemBuilder: (context, index) {
+                    final product = filteredProducts[index];
+                    return Card(
+                      elevation: 2,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Expanded(
+                            child: ClipRRect(
+                              borderRadius: const BorderRadius.only(
+                                topLeft: Radius.circular(8),
+                                topRight: Radius.circular(8),
+                              ),
+                              child: Image.asset(
+                                product.imagePath,
+                                fit: BoxFit.cover,
+                                width: double.infinity,
+                                errorBuilder: (context, error, stackTrace) {
+                                  return Container(
+                                    color: Colors.grey[300],
+                                    child: const Center(
+                                      child: Icon(
+                                        Icons.image_not_supported,
+                                        size: 50,
+                                        color: Colors.grey,
+                                      ),
+                                    ),
+                                  );
+
+                                },
+                              ),
+                            ),
+                          ),
+                          Padding(
+                            padding: const EdgeInsets.all(8.0),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  product.name,
+                                  style: const TextStyle(
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                                Text(
+                                  'R\$${product.price.toStringAsFixed(2).replaceAll('.', ',')}',
+                                  style: const TextStyle(
+                                    fontSize: 14,
+                                    color: Colors.black54,
+                                  ),
+                                ),
+                                const SizedBox(height: 8),
+                                Align(
+                                  alignment: Alignment.centerRight,
+                                  child: IconButton(
+                                    onPressed: () => Provider.of<CartProvider>(
+                                        context,
+                                        listen: false)
+                                        .addToCart(product),
+                                    icon: const Icon(
+                                        Icons.shopping_bag_outlined,
+                                        color: Colors.pink),
+                                  ),
+                                ),
+
+                              ],
+                            ),
+                          ),
+
+                        ],
+                      ),
+                    );
+                  },
+                ),
+              ),
+            ),
+          ],
+        );
+      },
     );
   }
 
@@ -263,10 +267,10 @@ class _MainPageState extends State<MainPage> {
         child: IndexedStack(
           index: _currentIndex,
           children: [
-            _buildHomeContent(), // Home tab content
-            const CartContent(),  // Cart tab content
-            const Center(child: Text("Delivery Page")), // Placeholder for delivery tab
-            const Center(child: Text("Profile Page")), // Placeholder for profile tab
+            _buildHomeContent(),
+            CartContent(onAddMoreProducts: () => setState(() => _currentIndex = 0)),
+            const OrderStatusPage(),
+            const ProfileScreen(),
           ],
         ),
       ),
