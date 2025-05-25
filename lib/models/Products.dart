@@ -16,11 +16,11 @@ class Product {
 
   factory Product.fromJson(Map<String, dynamic> json) {
     return Product(
-      id: json['id'] as int? ?? 0, // Valor padrão se id estiver ausente
-      name: json['name'] as String? ?? 'Produto Desconhecido', // Valor padrão
-      category: json['category'] as String? ?? 'Uncategorized', // Valor padrão
-      price: (json['price'] as num?)?.toDouble() ?? 0.0, // Converte num para double com valor padrão
-      imagePath: json['imagePath'] as String? ?? '', // Valor padrão se ausente
+      id: json['id'] as int? ?? 0,
+      name: json['name'] as String? ?? 'Produto Desconhecido',
+      category: json['category'] as String? ?? 'Uncategorized',
+      price: (json['price'] as num?)?.toDouble() ?? 0.0,
+      imagePath: json['imagePath'] as String? ?? '',
     );
   }
 
@@ -34,7 +34,34 @@ class Product {
     };
   }
 }
+class OrderProduct {
+  final int id;
+  final String name;
+  final double price;
+  final String category;
+  final String imagePath;
+  final int quantity;
 
+  OrderProduct({
+    required this.id,
+    required this.name,
+    required this.price,
+    required this.category,
+    required this.imagePath,
+    required this.quantity,
+  });
+
+  factory OrderProduct.fromJson(Map<String, dynamic> json) {
+    return OrderProduct(
+      id: json['id'],
+      name: json['name'],
+      price: (json['price'] as num).toDouble(),
+      category: json['category'],
+      imagePath: json['imagePath'],
+      quantity: json['quantity'],
+    );
+  }
+}
 class CartItem {
   final Product product;
   int quantity;
@@ -43,12 +70,7 @@ class CartItem {
 
   Map<String, dynamic> toJson() {
     return {
-      'product': {
-        'name': product.name,
-        'price': product.price,
-        'imagePath': product.imagePath,
-        'category': product.category,
-      },
+      'id': product.id, // Problema: o backend espera 'productId'
       'quantity': quantity,
     };
   }
@@ -56,13 +78,14 @@ class CartItem {
   factory CartItem.fromJson(Map<String, dynamic> json) {
     return CartItem(
       product: Product(
-        id: 0, // ID não está no JSON do CartItem, pode ser ajustado no futuro
-        name: json['product']['name'] as String? ?? 'Produto Desconhecido',
-        price: (json['product']['price'] as num?)?.toDouble() ?? 0.0,
-        imagePath: json['product']['imagePath'] as String? ?? '',
-        category: json['product']['category'] as String? ?? 'Uncategorized',
+        id: json['id'] as int? ?? 0,
+        name: 'Produto Desconhecido',
+        price: 0.0,
+        imagePath: '',
+        category: 'Uncategorized',
       ),
       quantity: json['quantity'] as int? ?? 1,
     );
   }
+
 }

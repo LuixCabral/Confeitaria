@@ -1,11 +1,24 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:app_confeitaria/service/CartProvider.dart';
+import 'package:app_confeitaria/models/Products.dart';
 
 class CartContent extends StatelessWidget {
   final VoidCallback onAddMoreProducts;
+  final Function({
+  required String name,
+  required String status,
+  required String code,
+  required String date,
+  required List<Map<String, dynamic>> products,
+  required double totalPrice,
+  }) updateOrderStatus;
 
-  const CartContent({super.key, required this.onAddMoreProducts});
+  const CartContent({
+    super.key,
+    required this.onAddMoreProducts,
+    required this.updateOrderStatus,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -14,7 +27,6 @@ class CartContent extends StatelessWidget {
         final cartItems = cartProvider.cartItems;
         print('CartContent rebuilt with ${cartItems.length} items');
 
-        // Calcula o total diretamente com price como double
         double total = cartItems.fold(0.0, (sum, item) {
           return sum + (item.product.price * item.quantity);
         });
@@ -193,9 +205,20 @@ class CartContent extends StatelessWidget {
                     Expanded(
                       child: ElevatedButton(
                         onPressed: cartItems.isEmpty
-                            ? null // Desativa o botão se o carrinho estiver vazio
-                            : () {
-                          Navigator.pushNamed(context, '/checkout');
+                            ? null
+                            : () async {
+                          final result = await Navigator.pushNamed(
+                              context, '/checkout');
+                          if (result != null && result is Map) {
+                            updateOrderStatus(
+                              name: result['name'] ?? '',
+                              status: result['orderStatus'] ?? 'preparing',
+                              code: result['orderCode'] ?? 'Sem código',
+                              date: result['orderDate'] ?? '',
+                              products: List<Map<String, dynamic>>.from(result['products'] ?? []),
+                              totalPrice: (result['totalPrice'] as num?)?.toDouble() ?? 0.0,
+                            );
+                          }
                         },
                         style: ElevatedButton.styleFrom(
                           backgroundColor: Colors.pink,

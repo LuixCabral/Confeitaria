@@ -18,11 +18,43 @@ class MainPage extends StatefulWidget {
 class _MainPageState extends State<MainPage> {
   int _currentIndex = 0;
   String _selectedCategory = "Cakes";
+  String _orderStatus = 'nenhum';
+  String _orderCode = '';
+  String _name = '';
+  String _orderDate = '';
+  List<Map<String, dynamic>> _products = [];
+  double _totalPrice = 0.0;
+  bool _hasFetchedProducts = false;
+
+  void _updateOrderStatus({
+    required String name,
+    required String status,
+    required String code,
+    required String date,
+    required List<Map<String, dynamic>> products,
+    required double totalPrice,
+  }) {
+    setState(() {
+      _name = name;
+      _orderStatus = status;
+      _orderCode = code;
+      _orderDate = date;
+      _products = products;
+      _totalPrice = totalPrice;
+      _currentIndex = 2; // Navega para a aba de status do pedido
+    });
+  }
 
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    Provider.of<ProductProvider>(context, listen: false).fetchProducts();
+    if (!_hasFetchedProducts) {
+      Provider.of<ProductProvider>(context, listen: false).fetchProducts().then((_) {
+        setState(() {
+          _hasFetchedProducts = true;
+        });
+      });
+    }
   }
 
   void _onTabTapped(int index) {
@@ -77,7 +109,6 @@ class _MainPageState extends State<MainPage> {
         ),
       ),
       child: Text(displayName),
-
     );
   }
 
@@ -91,8 +122,26 @@ class _MainPageState extends State<MainPage> {
           return Center(child: Text('Erro: ${productProvider.error}'));
         }
 
+        String backendCategory;
+        switch (_selectedCategory) {
+          case "Cakes":
+            backendCategory = "Cakes";
+            break;
+          case "Pies":
+            backendCategory = "Pies";
+            break;
+          case "Sweets":
+            backendCategory = "Sweets";
+            break;
+          case "Drinks":
+            backendCategory = "Drinks";
+            break;
+          default:
+            backendCategory = _selectedCategory.toLowerCase();
+        }
+
         final filteredProducts = productProvider.products
-            .where((product) => product.category == _selectedCategory)
+            .where((product) => product.category.toLowerCase() == backendCategory.toLowerCase())
             .toList();
 
         return Column(
@@ -141,7 +190,7 @@ class _MainPageState extends State<MainPage> {
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 6.0),
               child: SizedBox(
-                height: 50, // Define a altura fixa para os botões
+                height: 50,
                 child: SingleChildScrollView(
                   scrollDirection: Axis.horizontal,
                   child: Row(
@@ -158,7 +207,6 @@ class _MainPageState extends State<MainPage> {
                 ),
               ),
             ),
-
             const SizedBox(height: 16),
             Expanded(
               child: Padding(
@@ -205,7 +253,6 @@ class _MainPageState extends State<MainPage> {
                                       ),
                                     ),
                                   );
-
                                 },
                               ),
                             ),
@@ -233,20 +280,30 @@ class _MainPageState extends State<MainPage> {
                                 Align(
                                   alignment: Alignment.centerRight,
                                   child: IconButton(
-                                    onPressed: () => Provider.of<CartProvider>(
-                                        context,
-                                        listen: false)
-                                        .addToCart(product),
+                                    onPressed: () {
+                                      Provider.of<CartProvider>(context,
+                                          listen: false)
+                                          .addToCart(product);
+                                      print(
+                                          'Produto adicionado ao carrinho: ${product.name} (ID: ${product.id})');
+                                      ScaffoldMessenger.of(context)
+                                          .showSnackBar(
+                                        SnackBar(
+                                          content: Text(
+                                              '${product.name} adicionado ao carrinho!'),
+                                          duration:
+                                          const Duration(seconds: 2),
+                                        ),
+                                      );
+                                    },
                                     icon: const Icon(
                                         Icons.shopping_bag_outlined,
                                         color: Colors.pink),
                                   ),
                                 ),
-
                               ],
                             ),
                           ),
-
                         ],
                       ),
                     );
@@ -268,8 +325,22 @@ class _MainPageState extends State<MainPage> {
           index: _currentIndex,
           children: [
             _buildHomeContent(),
-            CartContent(onAddMoreProducts: () => setState(() => _currentIndex = 0)),
-            const OrderStatusPage(),
+            CartContent(
+              onAddMoreProducts: () => setState(() => _currentIndex = 0),
+              updateOrderStatus: _updateOrderStatus,
+            ),
+            // Recriar OrderStatusPage toda vez que os dados mudarem
+            KeyedSubtree(
+              key: ValueKey('$_orderStatus-$_orderCode'), // Forçar recriação
+              child: OrderStatusPage(
+                name: _name,
+                orderStatus: _orderStatus,
+                orderCode: _orderCode,
+                orderDate: _orderDate,
+                products: _products,
+                totalPrice: _totalPrice,
+              ),
+            ),
             const ProfileScreen(),
           ],
         ),

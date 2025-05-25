@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:mask_text_input_formatter/mask_text_input_formatter.dart';
-import 'package:app_confeitaria/models/Products.dart'; // Certifique-se que este caminho está correto
-import 'package:app_confeitaria/service/CartProvider.dart'; // Certifique-se que este caminho está correto
-import 'package:app_confeitaria/widgets/OrderStatus.dart'; // Certifique-se que este caminho está correto
-import 'package:app_confeitaria/localdata/DatabaseHelper.dart'; // Certifique-se que este caminho está correto
+import 'package:app_confeitaria/models/Products.dart';
+import 'package:app_confeitaria/service/CartProvider.dart';
+import 'package:app_confeitaria/localdata/DatabaseHelper.dart';
+import 'package:app_confeitaria/service/ApiService.dart';
 
 class CheckoutPage extends StatefulWidget {
   const CheckoutPage({super.key});
@@ -23,7 +23,7 @@ class _CheckoutPageState extends State<CheckoutPage> {
   final _cepController = TextEditingController();
   final _streetController = TextEditingController();
   final _houseNumberController = TextEditingController();
-  final _neighborhoodController = TextEditingController(); // NOVO: Controller para o bairro
+  final _neighborhoodController = TextEditingController();
   final _complementController = TextEditingController();
   bool _isCashOnDelivery = true;
   bool _isLoading = false;
@@ -44,6 +44,7 @@ class _CheckoutPageState extends State<CheckoutPage> {
   void initState() {
     super.initState();
     _loadUserData();
+    _cepController.addListener(_onCepChanged);
   }
 
   @override
@@ -53,8 +54,9 @@ class _CheckoutPageState extends State<CheckoutPage> {
     _cepController.dispose();
     _streetController.dispose();
     _houseNumberController.dispose();
-    _neighborhoodController.dispose(); // NOVO: Dispose do controller do bairro
+    _neighborhoodController.dispose();
     _complementController.dispose();
+    _cepController.removeListener(_onCepChanged);
     super.dispose();
   }
 
@@ -68,6 +70,29 @@ class _CheckoutPageState extends State<CheckoutPage> {
           _phoneController.text = userData[0]['phone'] ?? '';
         });
       }
+    }
+  }
+
+  void _onCepChanged() {
+    String cep = _cepController.text.replaceAll(RegExp(r'[\-\s]'), '');
+    if (cep.length == 8) {
+      _fetchAddress(cep);
+    }
+  }
+
+  Future<void> _fetchAddress(String cep) async {
+    try {
+      final addressData = await ApiService.fetchAddress(cep);
+      if (mounted) {
+        setState(() {
+          _streetController.text = addressData['logradouro'] ?? '';
+          _neighborhoodController.text = addressData['bairro'] ?? '';
+        });
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Erro ao buscar CEP: $e')),
+      );
     }
   }
 
@@ -88,15 +113,58 @@ class _CheckoutPageState extends State<CheckoutPage> {
       return sum + (item.product.price * item.quantity);
     });
 
-    // NOTA: Para salvar o endereço completo (incluindo o bairro) no banco de dados,
-    // você precisaria modificar o método 'db.insertOrder' em seu DatabaseHelper.dart
-    // para aceitar mais parâmetros (ex: uma string de endereço completo).
-    // Exemplo de string de endereço completo:
-    // String fullAddress = "${_streetController.text}, Nº ${_houseNumberController.text}, Bairro: ${_neighborhoodController.text}, CEP: ${_cepController.text}${_complementController.text.isNotEmpty ? ', Compl: ${_complementController.text}' : ''}";
-    // E a chamada seria: await db.insertOrder(userId, orderNumber, total, fullAddress); (se seu método fosse adaptado)
-
-    // Mantendo a chamada original para evitar quebrar sua implementação atual do DatabaseHelper:
     await db.insertOrder(userId, orderNumber, total);
+    await _sendOrderToApi(cartItems, total, userId);
+  }
+
+  Future<void> _sendOrderToApi(List<CartItem> cartItems, double total, int userId) async {
+    final String fullAddress =
+        "${_streetController.text}, Nº ${_houseNumberController.text}, Bairro: ${_neighborhoodController.text}, CEP: ${_cepController.text}${_complementController.text.isNotEmpty ? ', Compl: ${_complementController.text}' : ''}";
+    final now = DateTime.now();
+    final offset = now.timeZoneOffset;
+    final offsetSign = offset.isNegative ? '-' : '+';
+    final offsetHours = offset.inHours.abs().toString().padLeft(2, '0');
+    final offsetMinutes = (offset.inMinutes.abs() % 60).toString().padLeft(2, '0');
+    final formattedDate =
+        "${now.toIso8601String().split('.').first}.${now.millisecond.toString().padLeft(3, '0')}$offsetSign$offsetHours:$offsetMinutes";
+
+    final Map<String, dynamic> orderData = {
+      'dateTime': formattedDate,
+      'items': cartItems.map((item) => {'id': item.product.id, 'quantity': item.quantity}).toList(),
+      'userCode': "1234",
+      'address': fullAddress,
+      'paymentMethod': _isCashOnDelivery ? 1 : 2,
+    };
+    print('JSON enviado: $orderData');
+
+    try {
+      final response = await ApiService.createOrder(orderData);
+      print('Resposta do backend: $response');
+
+      if (mounted) {
+        final cartProvider = Provider.of<CartProvider>(context, listen: false);
+        cartProvider.clearCart();
+
+        // Retornar todos os dados necessários para o MainPage
+        Navigator.pop(context, {
+          'name': response['name'] ?? _nameController.text,
+          'orderCode': response['orderCode']?.toString() ?? 'Sem código',
+          'orderStatus': response['orderStatus']?.toString() ?? 'preparing',
+          'orderDate': response['orderDate']?.toString() ?? formattedDate,
+          'products': List<Map<String, dynamic>>.from(response['products'] ?? []),
+          'totalPrice': (response['totalPrice'] as num?)?.toDouble() ?? total,
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Erro ao enviar o pedido: $e')),
+        );
+      }
+    }
   }
 
   void _continueStep() async {
@@ -132,15 +200,6 @@ class _CheckoutPageState extends State<CheckoutPage> {
       try {
         final cartProvider = Provider.of<CartProvider>(context, listen: false);
         await _saveOrder(cartProvider.cartItems);
-        cartProvider.clearCart();
-
-        if (mounted) {
-          Navigator.pushAndRemoveUntil(
-            context,
-            MaterialPageRoute(builder: (context) => const OrderStatusPage()),
-                (Route<dynamic> route) => false,
-          );
-        }
       } catch (e) {
         if (mounted) {
           setState(() {
@@ -346,13 +405,13 @@ class _CheckoutPageState extends State<CheckoutPage> {
                       return null;
                     },
                   ),
-                  const SizedBox(height: 16), // Espaço antes do novo campo
-                  TextFormField( // NOVO CAMPO: Bairro
+                  const SizedBox(height: 16),
+                  TextFormField(
                     controller: _neighborhoodController,
                     decoration: const InputDecoration(
                       labelText: "Bairro",
                       border: OutlineInputBorder(),
-                      prefixIcon: Icon(Icons.holiday_village_outlined), // Ícone sugestivo para bairro/vizinhança
+                      prefixIcon: Icon(Icons.holiday_village_outlined),
                     ),
                     validator: (value) {
                       if (value == null || value.trim().isEmpty) {
@@ -399,7 +458,9 @@ class _CheckoutPageState extends State<CheckoutPage> {
                     },
                   ),
                   onTap: () {
-                    setState(() { _isCashOnDelivery = true; });
+                    setState(() {
+                      _isCashOnDelivery = true;
+                    });
                   },
                 ),
                 ListTile(
@@ -436,14 +497,17 @@ class _CheckoutPageState extends State<CheckoutPage> {
                   style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                 ),
                 const SizedBox(height: 16),
-                Text("Nome: ${_nameController.text}", style: const TextStyle(fontSize: 16)),
-                Text("Telefone: ${_phoneController.text}", style: const TextStyle(fontSize: 16)),
+                Text("Nome: ${_nameController.text}",
+                    style: const TextStyle(fontSize: 16)),
+                Text("Telefone: ${_phoneController.text}",
+                    style: const TextStyle(fontSize: 16)),
                 const SizedBox(height: 8),
-                Text( // ATUALIZADO: Incluindo o bairro na exibição do endereço
+                Text(
                     "Endereço: ${_streetController.text}, Nº ${_houseNumberController.text}, Bairro: ${_neighborhoodController.text}${_complementController.text.isNotEmpty ? ', ${_complementController.text}' : ''}, CEP: ${_cepController.text}",
                     style: const TextStyle(fontSize: 16)),
                 const SizedBox(height: 8),
-                Text("Pagamento: ${_isCashOnDelivery ? 'Na Entrega' : 'Outro'}", style: const TextStyle(fontSize: 16)),
+                Text("Pagamento: ${_isCashOnDelivery ? 'Na Entrega' : 'Outro'}",
+                    style: const TextStyle(fontSize: 16)),
                 const SizedBox(height: 16),
                 const Divider(),
                 const Text(
@@ -462,8 +526,12 @@ class _CheckoutPageState extends State<CheckoutPage> {
                       child: Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          Expanded(child: Text("${item.product.name} (x${item.quantity})", style: const TextStyle(fontSize: 15))),
-                          Text("R\$${(item.product.price * item.quantity).toStringAsFixed(2).replaceAll('.', ',')}", style: const TextStyle(fontSize: 15)),
+                          Expanded(
+                              child: Text("${item.product.name} (x${item.quantity})",
+                                  style: const TextStyle(fontSize: 15))),
+                          Text(
+                              "R\$${(item.product.price * item.quantity).toStringAsFixed(2).replaceAll('.', ',')}",
+                              style: const TextStyle(fontSize: 15)),
                         ],
                       ),
                     );
@@ -480,7 +548,10 @@ class _CheckoutPageState extends State<CheckoutPage> {
                     ),
                     Text(
                       "R\$ $formattedTotal",
-                      style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.pink),
+                      style: const TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.pink),
                     ),
                   ],
                 ),

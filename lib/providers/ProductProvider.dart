@@ -1,7 +1,7 @@
-// lib/providers/product_provider.dart
-import 'package:flutter/foundation.dart';
-import 'package:app_confeitaria/service/ApiService.dart';
-import 'package:app_confeitaria/models/Products.dart';
+import 'package:flutter/cupertino.dart';
+
+import '../models/Products.dart';
+import '../service/ApiService.dart';
 
 class ProductProvider with ChangeNotifier {
   List<Product> _products = [];
@@ -19,8 +19,13 @@ class ProductProvider with ChangeNotifier {
 
     try {
       _products = await ApiService.fetchProducts();
+      print('Produtos carregados: ${_products.length} itens'); // Depuração
+      for (var product in _products) {
+        print('Produto: ${product.name}, Categoria: ${product.category}'); // Depuração
+      }
     } catch (e) {
       _error = e.toString();
+      print('Erro ao carregar produtos: $e'); // Depuração
     } finally {
       _isLoading = false;
       notifyListeners();
