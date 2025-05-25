@@ -1,12 +1,24 @@
+import 'package:app_confeitaria/models/Products.dart';
 import 'package:flutter/material.dart';
+import 'package:app_confeitaria/providers/ProductProvider.dart';
+import 'package:app_confeitaria/models/Products.dart';
+import 'package:provider/provider.dart';
 
 class ProductDetailPage extends StatefulWidget {
+  const ProductDetailPage({Key? key}) : super(key: key);
+
   @override
-  _ProductDetailPageState createState() => _ProductDetailPageState();
+  ProductDetailPageState createState() => ProductDetailPageState();
 }
 
-class _ProductDetailPageState extends State<ProductDetailPage> {
+class ProductDetailPageState extends State<ProductDetailPage> {
   int quantity = 1;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    Provider.of<ProductProvider>(context, listen: false).fetchProducts();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -36,14 +48,13 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
                 ],
               ),
             ),
-            Container(
-              height: 584,
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius:
-                    BorderRadius.vertical(top: Radius.circular(40)),
-              ),
-              child: Expanded(
+            Expanded(
+              child: Container(
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius:
+                      BorderRadius.vertical(top: Radius.circular(40)),
+                ),
                 child: SingleChildScrollView(
                   padding: const EdgeInsets.all(20),
                   child: Column(
@@ -51,24 +62,16 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
                       ClipRRect(
                         borderRadius: BorderRadius.circular(12),
                         child: Image.asset(
-                          'assets/torta.png', // Replace with your image asset
+                          (ModalRoute.of(context)?.settings.arguments as Product).imagePath,
                           height: 180,
                           fit: BoxFit.cover,
                         ),
                       ),
                       SizedBox(height: 20),
                       Text(
-                        'Torta de Carne',
+                        (ModalRoute.of(context)?.settings.arguments as Product).name,
                         style: TextStyle(
                             fontSize: 24, fontWeight: FontWeight.bold),
-                      ),
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Icon(Icons.star, color: Colors.amber, size: 20),
-                          SizedBox(width: 4),
-                          Text('4.8/5'),
-                        ],
                       ),
                       SizedBox(height: 16),
                       Row(
@@ -92,7 +95,9 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
                             },
                           ),
                           SizedBox(width: 16),
-                          Text('R\$ 10,00/un',
+                          Text(
+                              ((ModalRoute.of(context)?.settings.arguments as Product).price)
+                                  .toStringAsFixed(2),
                               style: TextStyle(
                                   fontSize: 18, fontWeight: FontWeight.bold)),
                         ],
@@ -110,12 +115,6 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
                           'Add To Cart',
                           style: TextStyle(color: Colors.white),
                         ),
-                      ),
-                      SizedBox(height: 20),
-                      Text(
-                        'Descubra o sabor irresistível da nossa Torta de Carne, uma combinação perfeita de massa leve e crocante com um recheio suculento e temperado na medida certa. Feita com carne selecionada e ingredientes frescos, essa torta é ideal para qualquer ocasião: desde um lanche prático até um jantar especial.',
-                        style: TextStyle(color: Colors.black87),
-                        textAlign: TextAlign.justify,
                       ),
                     ],
                   ),
