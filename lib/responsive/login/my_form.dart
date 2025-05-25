@@ -29,7 +29,7 @@ class _MyFormState extends State<MyForm> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.deepPurpleAccent,
+      backgroundColor: Color(0xFFBF927B),
       body: Row(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
@@ -53,7 +53,7 @@ class _MyFormState extends State<MyForm> {
                       const Text(
                         'Bem Vindo!!',
                         style: TextStyle(
-                          color: Colors.deepPurpleAccent,
+                          color: Color(0xFFBF927B),
                           fontSize: 22,
                           fontWeight: FontWeight.bold,
                         ),
@@ -136,7 +136,7 @@ class _MyFormState extends State<MyForm> {
                             }
                           },
                           style: ButtonStyle(
-                            shadowColor: WidgetStateProperty.all(Colors.deepPurple),
+                            shadowColor: WidgetStateProperty.all(Color(0xFFBF927B)),
                             shape: WidgetStateProperty.all(
                               RoundedRectangleBorder(
                                 borderRadius: BorderRadius.circular(8),
