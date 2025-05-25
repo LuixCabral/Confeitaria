@@ -1,4 +1,3 @@
-// lib/models/product_model.dart
 class Product {
   final int id;
   final String name;
@@ -34,6 +33,7 @@ class Product {
     };
   }
 }
+
 class OrderProduct {
   final int id;
   final String name;
@@ -61,31 +61,4 @@ class OrderProduct {
       quantity: json['quantity'],
     );
   }
-}
-class CartItem {
-  final Product product;
-  int quantity;
-
-  CartItem({required this.product, this.quantity = 1});
-
-  Map<String, dynamic> toJson() {
-    return {
-      'id': product.id, // Problema: o backend espera 'productId'
-      'quantity': quantity,
-    };
-  }
-
-  factory CartItem.fromJson(Map<String, dynamic> json) {
-    return CartItem(
-      product: Product(
-        id: json['id'] as int? ?? 0,
-        name: 'Produto Desconhecido',
-        price: 0.0,
-        imagePath: '',
-        category: 'Uncategorized',
-      ),
-      quantity: json['quantity'] as int? ?? 1,
-    );
-  }
-
 }

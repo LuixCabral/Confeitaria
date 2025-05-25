@@ -381,19 +381,7 @@ class _OrderStatusPageState extends State<OrderStatusPage> {
               Padding(
                 padding: const EdgeInsets.symmetric(vertical: 16.0),
                 child: Center(
-                  child: ElevatedButton(
-                    onPressed: () {
-                      Navigator.pop(context);
-                    },
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.pink,
-                      minimumSize: const Size(double.infinity, 50),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                    ),
-                    child: const Text("Voltar à Loja"),
-                  ),
+
                 ),
               ),
           ],

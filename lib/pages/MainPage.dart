@@ -7,6 +7,7 @@ import 'package:app_confeitaria/widgets/bottom_nav_bar.dart';
 import 'package:app_confeitaria/widgets/CartContent.dart';
 import 'package:app_confeitaria/widgets/OrderStatus.dart';
 import 'package:app_confeitaria/widgets/ProfilePage.dart';
+import 'package:app_confeitaria/pages/product_details_page.dart';
 
 class MainPage extends StatefulWidget {
   const MainPage({super.key});
@@ -49,10 +50,16 @@ class _MainPageState extends State<MainPage> {
   void didChangeDependencies() {
     super.didChangeDependencies();
     if (!_hasFetchedProducts) {
-      Provider.of<ProductProvider>(context, listen: false).fetchProducts().then((_) {
+      Provider.of<ProductProvider>(context, listen: false)
+          .fetchProducts()
+          .then((_) {
         setState(() {
           _hasFetchedProducts = true;
         });
+      }).catchError((error) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Erro ao carregar produtos: $error')),
+        );
       });
     }
   }
@@ -122,26 +129,10 @@ class _MainPageState extends State<MainPage> {
           return Center(child: Text('Erro: ${productProvider.error}'));
         }
 
-        String backendCategory;
-        switch (_selectedCategory) {
-          case "Cakes":
-            backendCategory = "Cakes";
-            break;
-          case "Pies":
-            backendCategory = "Pies";
-            break;
-          case "Sweets":
-            backendCategory = "Sweets";
-            break;
-          case "Drinks":
-            backendCategory = "Drinks";
-            break;
-          default:
-            backendCategory = _selectedCategory.toLowerCase();
-        }
-
         final filteredProducts = productProvider.products
-            .where((product) => product.category.toLowerCase() == backendCategory.toLowerCase())
+            .where((product) =>
+        product.category.toLowerCase() ==
+            _selectedCategory.toLowerCase())
             .toList();
 
         return Column(
@@ -188,7 +179,8 @@ class _MainPageState extends State<MainPage> {
               ),
             ),
             Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 6.0),
+              padding:
+              const EdgeInsets.symmetric(horizontal: 16.0, vertical: 6.0),
               child: SizedBox(
                 height: 50,
                 child: SingleChildScrollView(
@@ -212,7 +204,8 @@ class _MainPageState extends State<MainPage> {
               child: Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 16.0),
                 child: filteredProducts.isEmpty
-                    ? const Center(child: Text("Nenhum produto nesta categoria"))
+                    ? const Center(
+                    child: Text("Nenhum produto nesta categoria"))
                     : GridView.builder(
                   gridDelegate:
                   const SliverGridDelegateWithFixedCrossAxisCount(
@@ -224,87 +217,105 @@ class _MainPageState extends State<MainPage> {
                   itemCount: filteredProducts.length,
                   itemBuilder: (context, index) {
                     final product = filteredProducts[index];
-                    return Card(
-                      elevation: 2,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Expanded(
-                            child: ClipRRect(
-                              borderRadius: const BorderRadius.only(
-                                topLeft: Radius.circular(8),
-                                topRight: Radius.circular(8),
+                    return GestureDetector(
+                      onTap: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => ProductDetailsPage(),
+                            settings: RouteSettings(arguments: product),
+                          ),
+                        );
+                      },
+                      child: Card(
+                        elevation: 2,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Expanded(
+                              child: ClipRRect(
+                                borderRadius: const BorderRadius.only(
+                                  topLeft: Radius.circular(8),
+                                  topRight: Radius.circular(8),
+                                ),
+                                child: Image.asset(
+                                  product.imagePath,
+                                  fit: BoxFit.cover,
+                                  width: double.infinity,
+                                  errorBuilder:
+                                      (context, error, stackTrace) {
+                                    return Container(
+                                      color: Colors.grey[300],
+                                      child: const Center(
+                                        child: Icon(
+                                          Icons
+                                              .image_not_supported,
+                                          size: 50,
+                                          color: Colors.grey,
+                                        ),
+                                      ),
+                                    );
+                                  },
+                                ),
                               ),
-                              child: Image.asset(
-                                product.imagePath,
-                                fit: BoxFit.cover,
-                                width: double.infinity,
-                                errorBuilder: (context, error, stackTrace) {
-                                  return Container(
-                                    color: Colors.grey[300],
-                                    child: const Center(
-                                      child: Icon(
-                                        Icons.image_not_supported,
-                                        size: 50,
-                                        color: Colors.grey,
+                            ),
+                            Padding(
+                              padding: const EdgeInsets.all(8.0),
+                              child: Column(
+                                crossAxisAlignment:
+                                CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    product.name,
+                                    style: const TextStyle(
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                  Text(
+                                    'R\$${product.price.toStringAsFixed(2).replaceAll('.', ',')}',
+                                    style: const TextStyle(
+                                      fontSize: 14,
+                                      color: Colors.black54,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 8),
+                                  Align(
+                                    alignment: Alignment.centerRight,
+                                    child: IconButton(
+                                      onPressed: () {
+                                        Provider.of<CartProvider>(
+                                            context,
+                                            listen: false)
+                                            .addToCart(product, 1); // Quantidade padrão 1
+                                        print(
+                                            'Produto adicionado ao carrinho: ${product.name} (ID: ${product.id})');
+                                        ScaffoldMessenger.of(
+                                            context)
+                                            .showSnackBar(
+                                          SnackBar(
+                                            content: Text(
+                                                '${product.name} adicionado ao carrinho!'),
+                                            duration: const Duration(
+                                                seconds: 2),
+                                          ),
+                                        );
+                                      },
+                                      icon: const Icon(
+                                        Icons
+                                            .shopping_bag_outlined,
+                                        color: Colors.pink,
                                       ),
                                     ),
-                                  );
-                                },
+                                  ),
+                                ],
                               ),
                             ),
-                          ),
-                          Padding(
-                            padding: const EdgeInsets.all(8.0),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  product.name,
-                                  style: const TextStyle(
-                                    fontSize: 16,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
-                                Text(
-                                  'R\$${product.price.toStringAsFixed(2).replaceAll('.', ',')}',
-                                  style: const TextStyle(
-                                    fontSize: 14,
-                                    color: Colors.black54,
-                                  ),
-                                ),
-                                const SizedBox(height: 8),
-                                Align(
-                                  alignment: Alignment.centerRight,
-                                  child: IconButton(
-                                    onPressed: () {
-                                      Provider.of<CartProvider>(context,
-                                          listen: false)
-                                          .addToCart(product);
-                                      print(
-                                          'Produto adicionado ao carrinho: ${product.name} (ID: ${product.id})');
-                                      ScaffoldMessenger.of(context)
-                                          .showSnackBar(
-                                        SnackBar(
-                                          content: Text(
-                                              '${product.name} adicionado ao carrinho!'),
-                                          duration:
-                                          const Duration(seconds: 2),
-                                        ),
-                                      );
-                                    },
-                                    icon: const Icon(
-                                        Icons.shopping_bag_outlined,
-                                        color: Colors.pink),
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ],
+                          ],
+                        ),
                       ),
                     );
                   },
@@ -329,9 +340,8 @@ class _MainPageState extends State<MainPage> {
               onAddMoreProducts: () => setState(() => _currentIndex = 0),
               updateOrderStatus: _updateOrderStatus,
             ),
-            // Recriar OrderStatusPage toda vez que os dados mudarem
             KeyedSubtree(
-              key: ValueKey('$_orderStatus-$_orderCode'), // Forçar recriação
+              key: ValueKey('$_orderStatus-$_orderCode'),
               child: OrderStatusPage(
                 name: _name,
                 orderStatus: _orderStatus,

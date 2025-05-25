@@ -156,7 +156,7 @@ class CartContent extends StatelessWidget {
                                 onPressed: () {
                                   print(
                                       'Remove item at index $index: ${item.product.name}');
-                                  cartProvider.removeFromCart(index);
+                                  cartProvider.removeFromCart(item.product);
                                 },
                               ),
                             ],
@@ -215,8 +215,11 @@ class CartContent extends StatelessWidget {
                               status: result['orderStatus'] ?? 'preparing',
                               code: result['orderCode'] ?? 'Sem código',
                               date: result['orderDate'] ?? '',
-                              products: List<Map<String, dynamic>>.from(result['products'] ?? []),
-                              totalPrice: (result['totalPrice'] as num?)?.toDouble() ?? 0.0,
+                              products: List<Map<String, dynamic>>.from(
+                                  result['products'] ?? []),
+                              totalPrice: (result['totalPrice'] as num?)
+                                  ?.toDouble() ??
+                                  0.0,
                             );
                           }
                         },

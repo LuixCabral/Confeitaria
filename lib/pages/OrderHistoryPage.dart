@@ -1,5 +1,6 @@
 import 'package:app_confeitaria/localdata/DatabaseHelper.dart';
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 
 class OrderHistoryPage extends StatefulWidget {
   const OrderHistoryPage({super.key});
@@ -18,6 +19,10 @@ class _OrderHistoryPageState extends State<OrderHistoryPage> {
   }
 
   Future<void> _loadOrders() async {
+    setState(() {
+      _isLoading = true;
+    });
+    await Future.delayed(const Duration(seconds: 1)); // Simula carregamento
     setState(() {
       _isLoading = false;
     });
@@ -50,18 +55,52 @@ class _OrderHistoryPageState extends State<OrderHistoryPage> {
                 itemCount: orders.length,
                 itemBuilder: (context, index) {
                   final order = orders[index];
-                  return Card(
-                    elevation: 2,
-                    margin: const EdgeInsets.symmetric(vertical: 8.0),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: ListTile(
-                      title: Text("Pedido ${order['orderNumber']}"),
-                      subtitle: Text(
-                        "Data: ${DateTime.parse(order['dateTime']).toLocal().toString().split('.')[0]}\nTotal: R\$${order['total'].toStringAsFixed(2).replaceAll('.', ',')}",
-                      ),
-                    ),
+                  return FutureBuilder<List<Map<String, dynamic>>>(
+                    future: DatabaseHelper.instance.getOrderItems(order['id']),
+                    builder: (context, itemsSnapshot) {
+                      if (!itemsSnapshot.hasData) {
+                        return const SizedBox.shrink(); // Ou um placeholder
+                      }
+                      final orderItems = itemsSnapshot.data!;
+                      return Card(
+                        elevation: 2,
+                        margin: const EdgeInsets.symmetric(vertical: 8.0),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: ExpansionTile(
+                          title: Text("Pedido ${order['orderNumber']} (Código: ${order['orderCode']})"),
+                          subtitle: Text(
+                            "Data: ${DateFormat('dd/MM/yyyy HH:mm').format(DateTime.parse(order['dateTime']).toLocal())}\nTotal: R\$${order['total'].toStringAsFixed(2).replaceAll('.', ',')}",
+                          ),
+                          children: [
+                            Padding(
+                              padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text("Cliente: ${order['name']}", style: const TextStyle(fontWeight: FontWeight.bold)),
+                                  Text("Status: ${order['status']}", style: const TextStyle(fontStyle: FontStyle.italic)),
+                                  Text("Endereço: ${order['address']}"),
+                                  const SizedBox(height: 8),
+                                  const Text("Itens:", style: TextStyle(fontWeight: FontWeight.bold)),
+                                  ...orderItems.map((item) => Padding(
+                                    padding: const EdgeInsets.symmetric(vertical: 4.0),
+                                    child: Row(
+                                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                      children: [
+                                        Expanded(child: Text("${item['name']} (x${item['quantity']})")),
+                                        Text("R\$${(item['price'] * item['quantity']).toStringAsFixed(2).replaceAll('.', ',')}"),
+                                      ],
+                                    ),
+                                  )),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+                      );
+                    },
                   );
                 },
               );

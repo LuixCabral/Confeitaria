@@ -1,66 +1,81 @@
+import 'package:app_confeitaria/service/CartProvider.dart';
 import 'package:flutter/material.dart';
-import 'package:shared_preferences/shared_preferences.dart';
-import 'dart:convert';
-import 'package:app_confeitaria/models/Products.dart';
-class CartProvider extends ChangeNotifier {
+
+import '../models/Products.dart';
+
+
+class CartProvider with ChangeNotifier {
   List<CartItem> _cartItems = [];
 
   List<CartItem> get cartItems => _cartItems;
 
-  CartProvider() {
-    _loadCart();
-  }
+  void addToCart(Product product, [int quantity = 1]) {
+    final existingItemIndex = _cartItems.indexWhere((item) => item.product.id == product.id);
 
-  Future<void> _loadCart() async {
-    final prefs = await SharedPreferences.getInstance();
-    final cartJson = prefs.getStringList('cart') ?? [];
-    _cartItems = cartJson.map((json) => CartItem.fromJson(jsonDecode(json))).toList();
-    notifyListeners();
-  }
-
-  Future<void> _saveCart() async {
-    final prefs = await SharedPreferences.getInstance();
-    final cartJson = _cartItems.map((item) => jsonEncode(item.toJson())).toList();
-    await prefs.setStringList('cart', cartJson);
-  }
-
-  Future<void> addToCart(Product product) async {
-    final existingItem = _cartItems.firstWhere(
-          (item) => item.product.name == product.name,
-      orElse: () => CartItem(product: product, quantity: 0),
-    );
-    if (_cartItems.contains(existingItem)) {
-      existingItem.quantity += 1;
+    if (existingItemIndex != -1) {
+      // Se o produto já existe, incrementa a quantidade
+      _cartItems[existingItemIndex] = CartItem(
+        product: product,
+        quantity: _cartItems[existingItemIndex].quantity + quantity,
+      );
     } else {
-      _cartItems.add(CartItem(product: product, quantity: 1));
+      // Se não existe, adiciona um novo item com a quantidade especificada
+      _cartItems.add(CartItem(product: product, quantity: quantity));
     }
-    await _saveCart();
     notifyListeners();
   }
 
-  Future<void> removeFromCart(int index) async {
-    if (index >= 0 && index < _cartItems.length) {
+  void updateQuantity(int index, int newQuantity) {
+    if (index < 0 || index >= _cartItems.length) return;
+    if (newQuantity <= 0) {
       _cartItems.removeAt(index);
-      await _saveCart();
-      notifyListeners();
+    } else {
+      _cartItems[index] = CartItem(
+        product: _cartItems[index].product,
+        quantity: newQuantity,
+      );
     }
-  }
-
-  Future<void> updateQuantity(int index, int newQuantity) async {
-    if (index >= 0 && index < _cartItems.length) {
-      if (newQuantity <= 0) {
-        _cartItems.removeAt(index);
-      } else {
-        _cartItems[index].quantity = newQuantity;
-      }
-      await _saveCart();
-      notifyListeners();
-    }
-  }
-
-  Future<void> clearCart() async {
-    _cartItems.clear();
-    await _saveCart();
     notifyListeners();
+  }
+
+  void removeFromCart(Product product) {
+    _cartItems.removeWhere((item) => item.product.id == product.id);
+    notifyListeners();
+  }
+
+  void clearCart() {
+    _cartItems.clear();
+    notifyListeners();
+  }
+
+  double getTotal() {
+    return _cartItems.fold(0.0, (sum, item) => sum + (item.product.price * item.quantity));
+  }
+}
+
+class CartItem {
+  final Product product;
+  int quantity;
+
+  CartItem({required this.product, this.quantity = 1});
+
+  Map<String, dynamic> toJson() {
+    return {
+      'productId': product.id, // Ajustado para corresponder ao backend
+      'quantity': quantity,
+    };
+  }
+
+  factory CartItem.fromJson(Map<String, dynamic> json) {
+    return CartItem(
+      product: Product(
+        id: json['productId'] as int? ?? 0, // Ajustado para corresponder ao backend
+        name: json['name'] as String? ?? 'Produto Desconhecido',
+        price: (json['price'] as num?)?.toDouble() ?? 0.0,
+        imagePath: json['imagePath'] as String? ?? '',
+        category: json['category'] as String? ?? 'Uncategorized',
+      ),
+      quantity: json['quantity'] as int? ?? 1,
+    );
   }
 }

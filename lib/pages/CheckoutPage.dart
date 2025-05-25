@@ -96,6 +96,50 @@ class _CheckoutPageState extends State<CheckoutPage> {
     }
   }
 
+  Future<Map<String, dynamic>> _sendOrderToApi(List<CartItem> cartItems, double total, int userId) async {
+    final String fullAddress =
+        "${_streetController.text}, Nº ${_houseNumberController.text}, Bairro: ${_neighborhoodController.text}, CEP: ${_cepController.text}${_complementController.text.isNotEmpty ? ', Compl: ${_complementController.text}' : ''}";
+    final now = DateTime.now(); // 08:19 PM -03, May 25, 2025
+    final offset = now.timeZoneOffset;
+    final offsetSign = offset.isNegative ? '-' : '+';
+    final offsetHours = offset.inHours.abs().toString().padLeft(2, '0');
+    final offsetMinutes = (offset.inMinutes.abs() % 60).toString().padLeft(2, '0');
+    final formattedDate =
+        "${now.toIso8601String().split('.').first}.${now.millisecond.toString().padLeft(3, '0')}$offsetSign$offsetHours:$offsetMinutes";
+
+    final Map<String, dynamic> orderData = {
+      'dateTime': formattedDate,
+      'items': cartItems.map((item) => {'id': item.product.id, 'quantity': item.quantity}).toList(),
+      'userCode': "1234",
+      'address': fullAddress,
+      'paymentMethod': _isCashOnDelivery ? 1 : 0,
+    };
+    print('JSON enviado: $orderData');
+
+    try {
+      final response = await ApiService.createOrder(orderData);
+      print('Resposta do backend: $response');
+
+      if (mounted) {
+        final cartProvider = Provider.of<CartProvider>(context, listen: false);
+        cartProvider.clearCart();
+
+        return response;
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Erro ao enviar o pedido: $e')),
+        );
+      }
+      rethrow;
+    }
+    return {};
+  }
+
   Future<void> _saveOrder(List<CartItem> cartItems) async {
     final db = DatabaseHelper.instance;
     final userData = await db.getUser();
@@ -113,57 +157,41 @@ class _CheckoutPageState extends State<CheckoutPage> {
       return sum + (item.product.price * item.quantity);
     });
 
-    await db.insertOrder(userId, orderNumber, total);
-    await _sendOrderToApi(cartItems, total, userId);
-  }
-
-  Future<void> _sendOrderToApi(List<CartItem> cartItems, double total, int userId) async {
     final String fullAddress =
         "${_streetController.text}, Nº ${_houseNumberController.text}, Bairro: ${_neighborhoodController.text}, CEP: ${_cepController.text}${_complementController.text.isNotEmpty ? ', Compl: ${_complementController.text}' : ''}";
-    final now = DateTime.now();
-    final offset = now.timeZoneOffset;
-    final offsetSign = offset.isNegative ? '-' : '+';
-    final offsetHours = offset.inHours.abs().toString().padLeft(2, '0');
-    final offsetMinutes = (offset.inMinutes.abs() % 60).toString().padLeft(2, '0');
-    final formattedDate =
-        "${now.toIso8601String().split('.').first}.${now.millisecond.toString().padLeft(3, '0')}$offsetSign$offsetHours:$offsetMinutes";
 
-    final Map<String, dynamic> orderData = {
-      'dateTime': formattedDate,
-      'items': cartItems.map((item) => {'id': item.product.id, 'quantity': item.quantity}).toList(),
-      'userCode': "1234",
-      'address': fullAddress,
-      'paymentMethod': _isCashOnDelivery ? 1 : 2,
-    };
-    print('JSON enviado: $orderData');
+    final response = await _sendOrderToApi(cartItems, total, userId);
 
-    try {
-      final response = await ApiService.createOrder(orderData);
-      print('Resposta do backend: $response');
+    await db.insertOrder(
+      userId: userId,
+      orderNumber: orderNumber,
+      orderCode: response['orderCode']?.toString() ?? 'Sem código',
+      status: response['orderStatus']?.toString() ?? 'preparing',
+      dateTime: response['orderDate']?.toString() ?? DateTime.now().toIso8601String(),
+      address: fullAddress,
+      total: response['totalPrice']?.toDouble() ?? total,
+      name: response['name'] ?? _nameController.text,
+      items: List<Map<String, dynamic>>.from(response['products'] ?? []).map((item) {
+        return {
+          'id': item['id'],
+          'name': item['name'],
+          'quantity': item['quantity'],
+          'price': item['price'],
+          'imagePath': item['imagePath'] ?? '',
+          'category': item['category'] ?? '',
+        };
+      }).toList(),
+    );
 
-      if (mounted) {
-        final cartProvider = Provider.of<CartProvider>(context, listen: false);
-        cartProvider.clearCart();
-
-        // Retornar todos os dados necessários para o MainPage
-        Navigator.pop(context, {
-          'name': response['name'] ?? _nameController.text,
-          'orderCode': response['orderCode']?.toString() ?? 'Sem código',
-          'orderStatus': response['orderStatus']?.toString() ?? 'preparing',
-          'orderDate': response['orderDate']?.toString() ?? formattedDate,
-          'products': List<Map<String, dynamic>>.from(response['products'] ?? []),
-          'totalPrice': (response['totalPrice'] as num?)?.toDouble() ?? total,
-        });
-      }
-    } catch (e) {
-      if (mounted) {
-        setState(() {
-          _isLoading = false;
-        });
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Erro ao enviar o pedido: $e')),
-        );
-      }
+    if (mounted) {
+      Navigator.pop(context, {
+        'name': response['name'] ?? _nameController.text,
+        'orderCode': response['orderCode']?.toString() ?? 'Sem código',
+        'orderStatus': response['orderStatus']?.toString() ?? 'preparing',
+        'orderDate': response['orderDate']?.toString() ?? DateTime.now().toIso8601String(),
+        'products': List<Map<String, dynamic>>.from(response['products'] ?? []),
+        'totalPrice': (response['totalPrice'] as num?)?.toDouble() ?? total,
+      });
     }
   }
 

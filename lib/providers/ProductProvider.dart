@@ -25,7 +25,7 @@ class ProductProvider with ChangeNotifier {
       }
     } catch (e) {
       _error = e.toString();
-      print('Erro ao carregar produtos: $e'); // Depuração
+      print('Erro ao carregar produtos: $e');
     } finally {
       _isLoading = false;
       notifyListeners();
