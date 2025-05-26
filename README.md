@@ -14,4 +14,4 @@ Oficina do Bolo é um aplicativo móvel desenvolvido em Flutter para uma confeit
 ## Tecnologias Utilizadas
 
 - [Flutter](https://flutter.dev/) 
-- Java
+- JavaSpring
