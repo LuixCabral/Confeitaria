@@ -1,16 +1,17 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:app_confeitaria/pages/MainPage.dart';
 import 'package:app_confeitaria/pages/CheckoutPage.dart';
+import 'package:app_confeitaria/pages/login_mobile_body.dart';
 import 'package:app_confeitaria/service/CartProvider.dart';
-import 'package:app_confeitaria/providers/ProductProvider.dart'; // Import ProductProvider
+import 'package:app_confeitaria/providers/ProductProvider.dart';
+import 'package:app_confeitaria/widgets/auth_wrapper.dart';
 
 void main() {
   runApp(
     MultiProvider(
       providers: [
         ChangeNotifierProvider(create: (context) => CartProvider()),
-        ChangeNotifierProvider(create: (context) => ProductProvider()), // Add ProductProvider
+        ChangeNotifierProvider(create: (context) => ProductProvider()),
       ],
       child: const MyApp(),
     ),
@@ -27,8 +28,9 @@ class MyApp extends StatelessWidget {
       theme: ThemeData(
         primarySwatch: Colors.pink,
       ),
-      home: const MainPage(),
+      home: const AuthWrapper(),
       routes: {
+        '/login': (context) => const LoginMobileBody(),
         '/checkout': (context) => const CheckoutPage(),
       },
     );

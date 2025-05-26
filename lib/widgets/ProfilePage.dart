@@ -1,9 +1,10 @@
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
-import 'package:app_confeitaria/localdata/DatabaseHelper.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:app_confeitaria/pages/EditProfilePage.dart';
 import 'package:app_confeitaria/pages/OrderHistoryPage.dart';
+import 'package:app_confeitaria/service/auth_service.dart';
+import 'dart:io';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -16,38 +17,71 @@ class _ProfileScreenState extends State<ProfileScreen> {
   String _name = "Carregando...";
   String _phone = "Carregando...";
   bool _isLoading = true;
+  String? _profileImagePath; // Armazena o caminho da imagem
 
   @override
   void initState() {
     super.initState();
     _loadUserData();
   }
+
   Future<void> _loadUserData() async {
     try {
-      final db = DatabaseHelper.instance;
-      final userData = await compute((_) => db.getUser(), null);
-      print('Dados do usuário carregados: $userData');
-      if (userData.isNotEmpty) {
-        setState(() {
-          _name = userData[0]['name'] ?? "Não informado";
-          _phone = userData[0]['phone'] ?? "Não informado";
-        });
-      } else {
-        setState(() {
-          _name = "Não informado";
-          _phone = "Não informado";
-        });
-      }
+      final authService = AuthService();
+      final name = await authService.getUserName();
+      final phone = await authService.getUserPhone();
+      final imagePath = await authService.getProfileImagePath(); // Carrega o caminho da imagem
+      setState(() {
+        _name = name ?? "Não informado";
+        _phone = phone ?? "Não informado";
+        _profileImagePath = imagePath; // Atualiza o caminho da imagem
+        _isLoading = false;
+      });
     } catch (e) {
       print('Erro ao carregar dados do usuário: $e');
       setState(() {
         _name = "Erro ao carregar";
         _phone = "Erro ao carregar";
-      });
-    } finally {
-      setState(() {
         _isLoading = false;
       });
+    }
+  }
+
+  Future<void> _pickImage() async {
+    final picker = ImagePicker();
+    final source = await showDialog<ImageSource>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text("Selecionar Imagem"),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, ImageSource.gallery),
+            child: const Text("Galeria"),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, ImageSource.camera),
+            child: const Text("Câmera"),
+          ),
+        ],
+      ),
+    );
+    if (source != null) {
+      final pickedFile = await picker.pickImage(source: source);
+      if (pickedFile != null && mounted) {
+        final authService = AuthService();
+        await authService.saveProfileImagePath(pickedFile.path);
+        setState(() {
+          _profileImagePath = pickedFile.path;
+        });
+      }
+    }
+  }
+
+  Future<void> _handleLogout() async {
+    final authService = AuthService();
+    await authService.logout(); // Remove os dados do shared_preferences
+    if (mounted) {
+      Navigator.pushReplacementNamed(context, '/login'); // Redireciona para a tela de login
     }
   }
 
@@ -71,26 +105,16 @@ class _ProfileScreenState extends State<ProfileScreen> {
         padding: const EdgeInsets.symmetric(vertical: 20),
         child: Column(
           children: [
-            const ProfilePic(),
+            ProfilePic(
+              imagePath: _profileImagePath, // Passa o caminho da imagem para o ProfilePic
+              onCameraPressed: _pickImage, // Passa a função para selecionar a imagem
+            ),
             const SizedBox(height: 20),
             ProfileMenu(
               text: "Minha Conta",
               subtitle: "Nome: $_name\nTelefone: $_phone",
               icon: "assets/icons/User Icon.svg",
               press: () {},
-            ),
-            ProfileMenu(
-              text: "Editar Perfil",
-              icon: "assets/icons/Settings.svg",
-              press: () async {
-                final result = await Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (context) => const EditProfilePage()),
-                );
-                if (result == true) {
-                  _loadUserData(); // Recarrega os dados após edição
-                }
-              },
             ),
             ProfileMenu(
               text: "Ver Histórico",
@@ -103,24 +127,30 @@ class _ProfileScreenState extends State<ProfileScreen> {
               },
             ),
             ProfileMenu(
-              text: "Notificações",
-              icon: "assets/icons/Bell.svg",
-              press: () {},
-            ),
-            ProfileMenu(
-              text: "Configurações",
-              icon: "assets/icons/Settings.svg",
-              press: () {},
-            ),
-            ProfileMenu(
-              text: "Central de Ajuda",
-              icon: "assets/icons/Question mark.svg",
-              press: () {},
-            ),
-            ProfileMenu(
               text: "Sair",
               icon: "assets/icons/Log out.svg",
-              press: () {},
+              press: () async {
+                final shouldLogout = await showDialog<bool>(
+                  context: context,
+                  builder: (context) => AlertDialog(
+                    title: const Text('Sair'),
+                    content: const Text('Deseja realmente sair da conta?'),
+                    actions: [
+                      TextButton(
+                        onPressed: () => Navigator.of(context).pop(false),
+                        child: const Text('Não'),
+                      ),
+                      TextButton(
+                        onPressed: () => Navigator.of(context).pop(true),
+                        child: const Text('Sim'),
+                      ),
+                    ],
+                  ),
+                );
+                if (shouldLogout == true) {
+                  await _handleLogout();
+                }
+              },
             ),
           ],
         ),
@@ -132,7 +162,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
 class ProfilePic extends StatelessWidget {
   const ProfilePic({
     super.key,
+    this.imagePath, // Caminho da imagem salva
+    required this.onCameraPressed, // Função para selecionar a imagem
   });
+
+  final String? imagePath;
+  final VoidCallback onCameraPressed;
 
   @override
   Widget build(BuildContext context) {
@@ -143,9 +178,10 @@ class ProfilePic extends StatelessWidget {
         fit: StackFit.expand,
         clipBehavior: Clip.none,
         children: [
-          const CircleAvatar(
-            backgroundImage:
-            NetworkImage("https://i.postimg.cc/0jqKB6mS/Profile-Image.png"),
+          CircleAvatar(
+            backgroundImage: imagePath != null && File(imagePath!).existsSync()
+                ? FileImage(File(imagePath!)) // Usa a imagem salva se existir
+                : const NetworkImage("https://i.postimg.cc/0jqKB6mS/Profile-Image.png") as ImageProvider, // Imagem padrão
           ),
           Positioned(
             right: -16,
@@ -162,7 +198,7 @@ class ProfilePic extends StatelessWidget {
                   ),
                   backgroundColor: const Color(0xFFF5F6F9),
                 ),
-                onPressed: () {},
+                onPressed: onCameraPressed, // Chama a função para selecionar a imagem
                 child: SvgPicture.string(cameraIcon),
               ),
             ),
@@ -192,10 +228,10 @@ class ProfileMenu extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
       child: TextButton(
         style: TextButton.styleFrom(
-          foregroundColor: const Color(0xFFFF7643), // Cor laranja do ícone
+          foregroundColor: const Color(0xFFFF7643),
           padding: const EdgeInsets.all(20),
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
-          backgroundColor: const Color(0xFFF5F6F9), // Fundo claro
+          backgroundColor: const Color(0xFFF5F6F9),
         ),
         onPressed: press,
         child: Row(

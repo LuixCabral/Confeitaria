@@ -1,5 +1,7 @@
-import 'package:app_confeitaria/pages/MainPage.dart'; // Import the HomePage (adjust the path if needed)
+import 'package:app_confeitaria/pages/MainPage.dart';
+import 'package:app_confeitaria/service/auth_service.dart'; // Importe o AuthService
 import 'package:flutter/material.dart';
+import 'package:mask_text_input_formatter/mask_text_input_formatter.dart';
 
 class MyForm extends StatefulWidget {
   const MyForm({super.key});
@@ -9,9 +11,17 @@ class MyForm extends StatefulWidget {
 }
 
 class _MyFormState extends State<MyForm> {
-  final emaileditor = TextEditingController();
+  final phoneEditor = TextEditingController();
   final passwordEditor = TextEditingController();
   bool _rememberMe = false;
+  bool _isLoading = false;
+  final AuthService _authService = AuthService();
+
+  final _phoneMaskFormatter = MaskTextInputFormatter(
+    mask: '(##) # ####-####',
+    filter: {"#": RegExp(r'[0-9]')},
+    type: MaskAutoCompletionType.lazy,
+  );
 
   void _toggleRememberMe(bool? value) {
     setState(() {
@@ -19,9 +29,81 @@ class _MyFormState extends State<MyForm> {
     });
   }
 
+  Future<void> _handleLogin() async {
+    if (phoneEditor.text.isEmpty || passwordEditor.text.isEmpty) {
+      showDialog(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: const Text('Erro'),
+          content: const Text(
+            'Por favor, preencha o número de telefone e a senha.',
+            style: TextStyle(color: Colors.red),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text('OK'),
+            ),
+          ],
+        ),
+      );
+      return;
+    }
+
+    setState(() {
+      _isLoading = true;
+    });
+
+    try {
+      // Remove formatação do número de telefone antes de enviar
+      final cleanPhone = phoneEditor.text.replaceAll(RegExp(r'[()\-\s]'), '');
+      final token = await _authService.login(cleanPhone, passwordEditor.text);
+
+      if (token != null) {
+        // Se "Lembrar-me" estiver marcado, o token já está salvo pelo AuthService
+        if (!_rememberMe) {
+          // Se "Lembrar-me" não estiver marcado, remove o token ao sair
+          // Isso será tratado no logout ou em uma lógica futura
+        }
+        // Navega para a MainPage
+        if (mounted) {
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(builder: (context) => const MainPage()),
+          );
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        showDialog(
+          context: context,
+          builder: (context) => AlertDialog(
+            title: const Text('Erro'),
+            content: Text(
+              e.toString().replaceFirst('Exception: ', ''),
+              style: const TextStyle(color: Colors.red),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(context).pop(),
+                child: const Text('OK'),
+              ),
+            ],
+          ),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
+    }
+  }
+
   @override
   void dispose() {
-    emaileditor.dispose();
+    phoneEditor.dispose();
     passwordEditor.dispose();
     super.dispose();
   }
@@ -29,7 +111,7 @@ class _MyFormState extends State<MyForm> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Color(0xFFBF927B),
+      backgroundColor: const Color(0xFFBF927B),
       body: Row(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
@@ -65,13 +147,14 @@ class _MyFormState extends State<MyForm> {
                           horizontal: 25.0,
                         ),
                         child: TextField(
-                          controller: emaileditor,
+                          controller: phoneEditor,
                           decoration: const InputDecoration(
-                            labelText: 'Email',
+                            labelText: 'Número de Telefone',
                             border: OutlineInputBorder(),
-                            prefixIcon: Icon(Icons.email),
+                            prefixIcon: Icon(Icons.phone),
                           ),
-                          keyboardType: TextInputType.emailAddress,
+                          keyboardType: TextInputType.phone,
+                          inputFormatters: [_phoneMaskFormatter],
                         ),
                       ),
                       const SizedBox(height: 16),
@@ -108,35 +191,12 @@ class _MyFormState extends State<MyForm> {
                       SizedBox(
                         width: 150,
                         height: 45,
-                        child: ElevatedButton(
-                          onPressed: () {
-                            if (emaileditor.text.isEmpty || passwordEditor.text.isEmpty) {
-                              showDialog(
-                                context: context,
-                                builder: (context) => AlertDialog(
-                                  title: const Text('Erro'),
-                                  content: const Text(
-                                    'Por favor, preencha o email e a senha.',
-                                    style: TextStyle(color: Colors.red),
-                                  ),
-                                  actions: [
-                                    TextButton(
-                                      onPressed: () => Navigator.of(context).pop(),
-                                      child: const Text('OK'),
-                                    ),
-                                  ],
-                                ),
-                              );
-                            } else {
-                              // Navigate to HomePage
-                              Navigator.pushReplacement(
-                                context,
-                                  MaterialPageRoute(builder: (context) => const MainPage()),
-                              );
-                            }
-                          },
+                        child: _isLoading
+                            ? const Center(child: CircularProgressIndicator())
+                            : ElevatedButton(
+                          onPressed: _handleLogin,
                           style: ButtonStyle(
-                            shadowColor: WidgetStateProperty.all(Color(0xFFBF927B)),
+                            shadowColor: WidgetStateProperty.all(const Color(0xFFBF927B)),
                             shape: WidgetStateProperty.all(
                               RoundedRectangleBorder(
                                 borderRadius: BorderRadius.circular(8),
@@ -144,7 +204,7 @@ class _MyFormState extends State<MyForm> {
                             ),
                           ),
                           child: const Text(
-                            'login',
+                            'Login',
                             style: TextStyle(fontSize: 18),
                           ),
                         ),

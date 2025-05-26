@@ -1,7 +1,5 @@
 import 'dart:convert';
-
 import 'package:http/http.dart' as http;
-
 import '../models/Products.dart';
 
 class ApiService {
@@ -9,6 +7,30 @@ class ApiService {
   static const String productsEndpoint = '/product/list';
   static const String addressEndpoint = '/order/address/';
   static const String ordersEndpoint = '/order/create';
+  static const String loginEndpoint = '/auth/login';
+
+  static Future<Map<String, dynamic>> login(String phone, String password) async {
+    final response = await http.post(
+      Uri.parse('$baseUrl$loginEndpoint'),
+      headers: {'Content-Type': 'application/json'},
+      body: jsonEncode({
+        'phone': phone,
+        'password': password,
+      }),
+    );
+
+    if (response.statusCode == 200) {
+      final Map<String, dynamic> data = jsonDecode(response.body);
+      if (data['status'] == 'success') {
+        return data;
+      } else {
+        throw Exception(data['message'] ?? 'Erro ao fazer login');
+      }
+    } else {
+      final error = jsonDecode(response.body)['message'] ?? 'Erro ao fazer login';
+      throw Exception(error);
+    }
+  }
 
   static Future<List<Product>> fetchProducts() async {
     final response = await http.get(Uri.parse('$baseUrl$productsEndpoint'));
@@ -39,7 +61,7 @@ class ApiService {
 
     if (response.statusCode == 200 || response.statusCode == 201) {
       print(json.decode(response.body));
-      return json.decode(response.body); // Retorna o JSON da resposta
+      return json.decode(response.body);
     } else {
       throw Exception('Falha ao criar pedido: ${response.statusCode} - ${response.body}');
     }

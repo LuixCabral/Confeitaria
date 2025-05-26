@@ -3,8 +3,8 @@ import 'package:provider/provider.dart';
 import 'package:mask_text_input_formatter/mask_text_input_formatter.dart';
 import 'package:app_confeitaria/models/Products.dart';
 import 'package:app_confeitaria/service/CartProvider.dart';
-import 'package:app_confeitaria/localdata/DatabaseHelper.dart';
 import 'package:app_confeitaria/service/ApiService.dart';
+import 'package:app_confeitaria/service/auth_service.dart';
 
 class CheckoutPage extends StatefulWidget {
   const CheckoutPage({super.key});
@@ -61,14 +61,24 @@ class _CheckoutPageState extends State<CheckoutPage> {
   }
 
   Future<void> _loadUserData() async {
-    final db = DatabaseHelper.instance;
-    final userData = await db.getUser();
-    if (userData.isNotEmpty) {
+    final authService = AuthService();
+    try {
+      // Carrega apenas dados pessoais (nome e telefone)
+      final name = await authService.getUserName();
+      final phone = await authService.getUserPhone();
+
       if (mounted) {
         setState(() {
-          _nameController.text = userData[0]['name'] ?? '';
-          _phoneController.text = userData[0]['phone'] ?? '';
+          _nameController.text = name ?? '';
+          _phoneController.text = phone ?? '';
         });
+      }
+    } catch (e) {
+      print('Erro ao carregar dados do usuário: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Erro ao carregar dados do usuário: $e')),
+        );
       }
     }
   }
@@ -96,10 +106,10 @@ class _CheckoutPageState extends State<CheckoutPage> {
     }
   }
 
-  Future<Map<String, dynamic>> _sendOrderToApi(List<CartItem> cartItems, double total, int userId) async {
+  Future<Map<String, dynamic>> _sendOrderToApi(List<CartItem> cartItems, double total) async {
     final String fullAddress =
         "${_streetController.text}, Nº ${_houseNumberController.text}, Bairro: ${_neighborhoodController.text}, CEP: ${_cepController.text}${_complementController.text.isNotEmpty ? ', Compl: ${_complementController.text}' : ''}";
-    final now = DateTime.now(); // 08:19 PM -03, May 25, 2025
+    final now = DateTime.now();
     final offset = now.timeZoneOffset;
     final offsetSign = offset.isNegative ? '-' : '+';
     final offsetHours = offset.inHours.abs().toString().padLeft(2, '0');
@@ -123,7 +133,6 @@ class _CheckoutPageState extends State<CheckoutPage> {
       if (mounted) {
         final cartProvider = Provider.of<CartProvider>(context, listen: false);
         cartProvider.clearCart();
-
         return response;
       }
     } catch (e) {
@@ -141,47 +150,12 @@ class _CheckoutPageState extends State<CheckoutPage> {
   }
 
   Future<void> _saveOrder(List<CartItem> cartItems) async {
-    final db = DatabaseHelper.instance;
-    final userData = await db.getUser();
-    int userId;
-
-    if (userData.isEmpty || userData[0]['id'] == null) {
-      userId = await db.insertUser(_nameController.text, _phoneController.text);
-    } else {
-      userId = userData[0]['id'];
-      await db.updateUser(_nameController.text, _phoneController.text);
-    }
-
-    final orderNumber = "SN-${DateTime.now().millisecondsSinceEpoch}";
     final total = cartItems.fold(0.0, (sum, item) {
       return sum + (item.product.price * item.quantity);
     });
 
-    final String fullAddress =
-        "${_streetController.text}, Nº ${_houseNumberController.text}, Bairro: ${_neighborhoodController.text}, CEP: ${_cepController.text}${_complementController.text.isNotEmpty ? ', Compl: ${_complementController.text}' : ''}";
-
-    final response = await _sendOrderToApi(cartItems, total, userId);
-
-    await db.insertOrder(
-      userId: userId,
-      orderNumber: orderNumber,
-      orderCode: response['orderCode']?.toString() ?? 'Sem código',
-      status: response['orderStatus']?.toString() ?? 'preparing',
-      dateTime: response['orderDate']?.toString() ?? DateTime.now().toIso8601String(),
-      address: fullAddress,
-      total: response['totalPrice']?.toDouble() ?? total,
-      name: response['name'] ?? _nameController.text,
-      items: List<Map<String, dynamic>>.from(response['products'] ?? []).map((item) {
-        return {
-          'id': item['id'],
-          'name': item['name'],
-          'quantity': item['quantity'],
-          'price': item['price'],
-          'imagePath': item['imagePath'] ?? '',
-          'category': item['category'] ?? '',
-        };
-      }).toList(),
-    );
+    // Envia o pedido para a API
+    final response = await _sendOrderToApi(cartItems, total);
 
     if (mounted) {
       Navigator.pop(context, {
