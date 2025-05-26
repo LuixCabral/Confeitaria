@@ -1,16 +1,17 @@
-# app_confeitaria
+# Oficina do Bolo - App de Confeitaria em Flutter
 
-A new Flutter project.
 
-## Getting Started
+## Descrição
 
-This project is a starting point for a Flutter application.
+Oficina do Bolo é um aplicativo móvel desenvolvido em Flutter para uma confeitaria. O app permite aos usuários visualizar o catálogo de doces, bolos e sobremesas, fazer pedidos e acompanhar o status das encomenda.
 
-A few resources to get you started if this is your first Flutter project:
+## Funcionalidades
 
-- [Lab: Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Cookbook: Useful Flutter samples](https://docs.flutter.dev/cookbook)
+- Visualização do catálogo completo de produtos com fotos e descrições.
+- Sistema de cadastro e login de usuários.
+- Carrinho de compras e checkout integrado.
 
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+## Tecnologias Utilizadas
+
+- [Flutter](https://flutter.dev/) 
+- JavaSpring
