@@ -130,7 +130,12 @@ class ProductDetailsPageState extends State<ProductDetailsPage> {
                           style: TextStyle(color: Colors.white),
                         ),
                       ),
-                      Text(product.detalhes)
+                      Text(product.detalhes ,
+                      style: const TextStyle(
+                        color: Colors.black,
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold
+                      ),)
                     ],
                   ),
                 ),
