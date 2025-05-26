@@ -44,20 +44,8 @@ class ProductDetailsPageState extends State<ProductDetailsPage> {
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  TextButton(
-                    onPressed: () {},
-                    style: TextButton.styleFrom(
-                      backgroundColor: Colors.white,
-                      shape: const StadiumBorder(),
-                      padding: const EdgeInsets.symmetric(horizontal: 20),
-                    ),
-                    child: const Text(
-                      'Detalhes',
-                      style: TextStyle(color: Colors.brown),
-                    ),
-                  ),
                   IconButton(
-                    icon: const Icon(Icons.arrow_back, color: Colors.black),
+                    icon: const Icon(Icons.arrow_back, color: Colors.white),
                     onPressed: () => Navigator.pop(context),
                   ),
                 ],
@@ -122,7 +110,7 @@ class ProductDetailsPageState extends State<ProductDetailsPage> {
                           ),
                           const SizedBox(width: 16),
                           Text(
-                            product.price.toStringAsFixed(2).replaceAll('.', ','),
+                            "R/\$${product.price.toStringAsFixed(2).replaceAll('.', ',')}",
                             style: const TextStyle(
                                 fontSize: 18, fontWeight: FontWeight.bold),
                           ),
@@ -142,6 +130,7 @@ class ProductDetailsPageState extends State<ProductDetailsPage> {
                           style: TextStyle(color: Colors.white),
                         ),
                       ),
+                      Text(product.detalhes)
                     ],
                   ),
                 ),
