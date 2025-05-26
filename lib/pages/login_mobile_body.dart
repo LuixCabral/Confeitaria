@@ -157,7 +157,7 @@ class _LoginMobileBodyState extends State<LoginMobileBody> {
                     const Text(
                       'Bem Vindo!!',
                       style: TextStyle(
-                        color: Color(0xFFBF927B),
+                        color: Colors.pinkAccent,
                         fontSize: 22,
                         fontWeight: FontWeight.bold,
                       ),
@@ -221,7 +221,7 @@ class _LoginMobileBodyState extends State<LoginMobileBody> {
                               if (states.contains(WidgetState.disabled)) {
                                 return Colors.grey;
                               }
-                              return Colors.deepPurpleAccent;
+                              return Colors.pinkAccent;
                             },
                           ),
                           shadowColor: WidgetStateProperty.all(const Color(0xFFBF927B)),
