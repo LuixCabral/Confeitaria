@@ -15,6 +15,16 @@ class AuthService {
     }
   }
 
+  Future<bool> createAccount(String username, String phone, String password) async {
+    try {
+      await ApiService.createAccount(username, phone, password);
+      // Auto-login after account creation
+      return await login(phone, password);
+    } catch (e) {
+      throw Exception('Erro ao criar conta: $e');
+    }
+  }
+
   Future<bool> isAuthenticated() async {
     final prefs = await SharedPreferences.getInstance();
     return prefs.getBool('is_authenticated') ?? false;
@@ -38,13 +48,11 @@ class AuthService {
     return prefs.getString('user_name');
   }
 
-  // Novo método para salvar o caminho da imagem
   Future<void> saveProfileImagePath(String path) async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString('profile_image_path', path);
   }
 
-  // Novo método para carregar o caminho da imagem
   Future<String?> getProfileImagePath() async {
     final prefs = await SharedPreferences.getInstance();
     return prefs.getString('profile_image_path');

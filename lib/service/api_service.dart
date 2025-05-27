@@ -8,6 +8,7 @@ class ApiService {
   static const String addressEndpoint = '/order/address/';
   static const String ordersEndpoint = '/order/create';
   static const String loginEndpoint = '/auth/login';
+  static const String createAccountEndpoint = '/auth/create-account';
 
   static Future<Map<String, dynamic>> login(String phone, String password) async {
     final response = await http.post(
@@ -29,6 +30,26 @@ class ApiService {
     } else {
       final error = jsonDecode(response.body)['message'] ?? 'Erro ao fazer login';
       throw Exception(error);
+    }
+  }
+
+  static Future<void> createAccount(String username, String phone, String password) async {
+    final response = await http.post(
+      Uri.parse('$baseUrl$createAccountEndpoint'),
+      headers: {'Content-Type': 'application/json'},
+      body: jsonEncode({
+        'username': username,
+        'phone': phone,
+        'password': password,
+      }),
+    );
+
+    if (response.statusCode == 200) {
+      return;
+    } else if (response.statusCode == 409) {
+      throw Exception('Usuário já existe');
+    } else {
+      throw Exception('Erro ao criar conta: ${response.statusCode} - ${response.body}');
     }
   }
 
@@ -60,7 +81,6 @@ class ApiService {
     );
 
     if (response.statusCode == 200 || response.statusCode == 201) {
-      print(json.decode(response.body));
       return json.decode(response.body);
     } else {
       throw Exception('Falha ao criar pedido: ${response.statusCode} - ${response.body}');
