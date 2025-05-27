@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:mask_text_input_formatter/mask_text_input_formatter.dart';
-import 'package:app_confeitaria/models/Products.dart';
-import 'package:app_confeitaria/service/CartProvider.dart';
-import 'package:app_confeitaria/service/ApiService.dart';
+import 'package:app_confeitaria/models/products.dart';
+import 'package:app_confeitaria/providers/cart_provider.dart';
+import 'package:app_confeitaria/service/api_service.dart';
 import 'package:app_confeitaria/service/auth_service.dart';
 
 class CheckoutPage extends StatefulWidget {
@@ -63,7 +63,6 @@ class _CheckoutPageState extends State<CheckoutPage> {
   Future<void> _loadUserData() async {
     final authService = AuthService();
     try {
-      // Carrega apenas dados pessoais (nome e telefone)
       final name = await authService.getUserName();
       final phone = await authService.getUserPhone();
 
@@ -165,6 +164,8 @@ class _CheckoutPageState extends State<CheckoutPage> {
         'orderDate': response['orderDate']?.toString() ?? DateTime.now().toIso8601String(),
         'products': List<Map<String, dynamic>>.from(response['products'] ?? []),
         'totalPrice': (response['totalPrice'] as num?)?.toDouble() ?? total,
+        'address': response['address']?.toString() ??
+            "${_streetController.text}, Nº ${_houseNumberController.text}, Bairro: ${_neighborhoodController.text}, CEP: ${_cepController.text}${_complementController.text.isNotEmpty ? ', Compl: ${_complementController.text}' : ''}",
       });
     }
   }

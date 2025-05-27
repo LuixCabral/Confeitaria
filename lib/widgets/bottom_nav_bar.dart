@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:curved_navigation_bar/curved_navigation_bar.dart';
-import '../service/CartProvider.dart'; // Adjust the import path as needed
+import '../providers/cart_provider.dart'; // Adjust the import path as needed
 
 class BottomNavBar extends StatelessWidget {
   final int currentIndex;

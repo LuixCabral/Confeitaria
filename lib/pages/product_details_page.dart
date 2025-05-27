@@ -1,8 +1,8 @@
-import 'package:app_confeitaria/models/Products.dart';
+import 'package:app_confeitaria/models/products.dart';
 import 'package:flutter/material.dart';
-import 'package:app_confeitaria/providers/ProductProvider.dart';
+import 'package:app_confeitaria/providers/product_provider.dart';
 import 'package:provider/provider.dart';
-import 'package:app_confeitaria/service/CartProvider.dart';
+import 'package:app_confeitaria/providers/cart_provider.dart';
 
 class ProductDetailsPage extends StatefulWidget {
   const ProductDetailsPage({Key? key}) : super(key: key);

@@ -43,8 +43,10 @@ dependencies:
   path: ^1.8.0
   flutter_svg: ^2.0.7
   http: ^1.2.0
-  intl: ^0.18.0
+  intl: ^0.20.2
   image_picker: ^1.1.2
+  flutter_native_splash: ^2.4.6
+  flutter_launcher_icons: ^0.14.3
 dev_dependencies:
   flutter_test:
     sdk: flutter
@@ -97,3 +99,22 @@ flutter:
   #
   # For details regarding fonts from package dependencies,
   # see https://flutter.dev/to/font-from-package
+flutter_native_splash:
+  # Cor de fundo da sua tela de abertura
+  color: "#FFFFFF" # Branco
+
+  image: "assets/splash_logo.png"
+
+  # Para Android 12+ (opcional, mas recomendado)
+  android_12:
+    image: "assets/splash_logo_android12.png"
+    icon_background_color: "#FFFFFF"
+  android: true
+  ios: true
+  web: false
+
+flutter_launcher_icons:
+  image_path: "assets/splash.png"
+  android: "launcher_icon"
+  adaptative_icon_background: "#FFFFFF"
+  adaptative_icon_foreground: "assets/splash_icon.png"

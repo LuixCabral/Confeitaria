@@ -1,4 +1,4 @@
-import 'package:app_confeitaria/pages/MainPage.dart';
+import 'package:app_confeitaria/pages/main_page.dart';
 import 'package:app_confeitaria/service/auth_service.dart';
 import 'package:flutter/material.dart';
 

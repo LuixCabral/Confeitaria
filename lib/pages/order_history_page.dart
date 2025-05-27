@@ -1,4 +1,4 @@
-import 'package:app_confeitaria/localdata/DatabaseHelper.dart';
+import 'package:app_confeitaria/localdata/database_helper.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
@@ -62,6 +62,14 @@ class _OrderHistoryPageState extends State<OrderHistoryPage> {
                         return const SizedBox.shrink(); // Ou um placeholder
                       }
                       final orderItems = itemsSnapshot.data!;
+                      // Format date with error handling
+                      String formattedDate = 'Data inválida';
+                      try {
+                        final DateTime dateTime = DateTime.parse(order['dateTime']).toLocal();
+                        formattedDate = DateFormat('dd/MM/yyyy HH:mm').format(dateTime);
+                      } catch (e) {
+                        print('Error parsing date for order ${order['orderCode']}: $e');
+                      }
                       return Card(
                         elevation: 2,
                         margin: const EdgeInsets.symmetric(vertical: 8.0),
@@ -71,7 +79,7 @@ class _OrderHistoryPageState extends State<OrderHistoryPage> {
                         child: ExpansionTile(
                           title: Text("Pedido ${order['orderNumber']} (Código: ${order['orderCode']})"),
                           subtitle: Text(
-                            "Data: ${DateFormat('dd/MM/yyyy HH:mm').format(DateTime.parse(order['dateTime']).toLocal())}\nTotal: R\$${order['total'].toStringAsFixed(2).replaceAll('.', ',')}",
+                            "Data: $formattedDate\nTotal: R\$${order['total'].toStringAsFixed(2).replaceAll('.', ',')}",
                           ),
                           children: [
                             Padding(

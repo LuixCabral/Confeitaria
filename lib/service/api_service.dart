@@ -1,6 +1,6 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
-import '../models/Products.dart';
+import '../models/products.dart';
 
 class ApiService {
   static const String baseUrl = 'https://patisserieapi-production.up.railway.app/api';

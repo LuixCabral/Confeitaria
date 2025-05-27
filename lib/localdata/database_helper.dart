@@ -161,4 +161,5 @@ class DatabaseHelper {
     final db = await database;
     return await db.query('order_items', where: 'orderId = ?', whereArgs: [orderId], orderBy: 'id ASC');
   }
+
 }

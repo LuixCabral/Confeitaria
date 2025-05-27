@@ -1,7 +1,7 @@
-import 'package:app_confeitaria/service/CartProvider.dart';
+import 'package:app_confeitaria/providers/cart_provider.dart';
 import 'package:flutter/material.dart';
 
-import '../models/Products.dart';
+import '../models/products.dart';
 
 
 class CartProvider with ChangeNotifier {
@@ -26,7 +26,11 @@ class CartProvider with ChangeNotifier {
   }
 
   void updateQuantity(int index, int newQuantity) {
-    if (index < 0 || index >= _cartItems.length) return;
+    if (index < 0 || index >= _cartItems.length) {
+      print('Invalid index: $index');
+      return;
+    }
+    print('Updating quantity for ${ _cartItems[index].product.name} to $newQuantity');
     if (newQuantity <= 0) {
       _cartItems.removeAt(index);
     } else {

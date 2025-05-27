@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:app_confeitaria/pages/CheckoutPage.dart';
+import 'package:app_confeitaria/pages/checkout_page.dart';
 import 'package:app_confeitaria/pages/login_mobile_body.dart';
-import 'package:app_confeitaria/service/CartProvider.dart';
-import 'package:app_confeitaria/providers/ProductProvider.dart';
+import 'package:app_confeitaria/providers/cart_provider.dart';
+import 'package:app_confeitaria/providers/product_provider.dart';
 import 'package:app_confeitaria/widgets/auth_wrapper.dart';
 
 void main() {

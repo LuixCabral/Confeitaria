@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'package:app_confeitaria/localdata/database_helper.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
@@ -34,7 +35,7 @@ class _OrderStatusPageState extends State<OrderStatusPage> {
     // Validar o status inicial
     const List<String> statusSequence = [
       'enviado',
-      'preparing',
+      'em preparo',
       'saiu para entrega',
       'entregue'
     ];
@@ -61,18 +62,49 @@ class _OrderStatusPageState extends State<OrderStatusPage> {
   void _startStatusSimulation() {
     const List<String> statusSequence = [
       'enviado',
-      'preparing',
+      'em preparo',
       'saiu para entrega',
       'entregue'
     ];
     int currentIndex = statusSequence.indexOf(_currentStatus);
+    final DatabaseHelper dbHelper = DatabaseHelper.instance;
 
-    _statusTimer = Timer.periodic(const Duration(seconds: 5), (timer) {
+    _statusTimer = Timer.periodic(const Duration(seconds: 5), (timer) async {
       if (currentIndex < statusSequence.length - 1) {
         setState(() {
           currentIndex++;
           _currentStatus = statusSequence[currentIndex];
         });
+
+        // When status is 'entregue', save the order to the database
+        if (_currentStatus == 'entregue') {
+          try {
+            // Retrieve userId (assuming a single user for simplicity)
+            List<Map<String, dynamic>> users = await dbHelper.getUser();
+            int userId = users.isNotEmpty ? users[0]['id'] : 1; // Fallback to 1 if no user
+
+            // Convert orderDate to ISO 8601 format
+            final DateTime orderDateTime = DateTime.parse(widget.orderDate);
+            final String isoDateTime = orderDateTime.toIso8601String();
+
+            // Prepare order data
+            await dbHelper.insertOrder(
+              userId: userId,
+              orderNumber: widget.orderCode, // Using orderCode as orderNumber
+              orderCode: widget.orderCode,
+              status: _currentStatus,
+              dateTime: isoDateTime, // Use ISO 8601 format
+              address: '', // No address provided in widget; using empty string
+              total: widget.totalPrice,
+              name: widget.name,
+              items: widget.products,
+            );
+            print('Order saved to database');
+          } catch (e) {
+            print('Error saving order: $e');
+          }
+          timer.cancel();
+        }
       } else {
         timer.cancel();
       }
@@ -83,7 +115,7 @@ class _OrderStatusPageState extends State<OrderStatusPage> {
     switch (status) {
       case 'enviado':
         return Icons.send;
-      case 'preparing':
+      case 'em preparo':
         return Icons.kitchen;
       case 'saiu para entrega':
         return Icons.delivery_dining;
@@ -111,7 +143,6 @@ class _OrderStatusPageState extends State<OrderStatusPage> {
 
   @override
   Widget build(BuildContext context) {
-    // Se não houver produtos ou o status for 'nenhum', mostrar mensagem de "Nenhum pedido ativo"
     if (widget.products.isEmpty || _currentStatus == 'nenhum') {
       return Center(
         child: Column(
@@ -384,6 +415,7 @@ class _OrderStatusPageState extends State<OrderStatusPage> {
 
                 ),
               ),
+
           ],
         ),
       ),
@@ -393,7 +425,7 @@ class _OrderStatusPageState extends State<OrderStatusPage> {
   Widget _buildTimeline() {
     const List<String> statusSequence = [
       'enviado',
-      'preparing',
+      'em preparo',
       'saiu para entrega',
       'entregue'
     ];
@@ -437,6 +469,7 @@ class _OrderStatusPageState extends State<OrderStatusPage> {
                     height: 40,
                     color: isCompleted ? Colors.pink : Colors.grey[300],
                   ),
+
               ],
             ),
             const SizedBox(width: 16),
@@ -477,7 +510,7 @@ class _OrderStatusPageState extends State<OrderStatusPage> {
     switch (status) {
       case 'enviado':
         return 'Seu pedido foi recebido com sucesso.';
-      case 'preparing':
+      case 'Em preparo':
         return 'Estamos preparando seu pedido com carinho.';
       case 'saiu para entrega':
         return 'Seu pedido está a caminho!';

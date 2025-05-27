@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:app_confeitaria/service/CartProvider.dart';
-import 'package:app_confeitaria/models/Products.dart';
+import 'package:app_confeitaria/providers/cart_provider.dart';
 
 class CartContent extends StatelessWidget {
   final VoidCallback onAddMoreProducts;
@@ -212,7 +211,7 @@ class CartContent extends StatelessWidget {
                           if (result != null && result is Map) {
                             updateOrderStatus(
                               name: result['name'] ?? '',
-                              status: result['orderStatus'] ?? 'preparing',
+                              status: result['orderStatus'] ?? 'enviado',
                               code: result['orderCode'] ?? 'Sem código',
                               date: result['orderDate'] ?? '',
                               products: List<Map<String, dynamic>>.from(
@@ -220,6 +219,7 @@ class CartContent extends StatelessWidget {
                               totalPrice: (result['totalPrice'] as num?)
                                   ?.toDouble() ??
                                   0.0,
+
                             );
                           }
                         },

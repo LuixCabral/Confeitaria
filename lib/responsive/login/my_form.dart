@@ -1,4 +1,4 @@
-import 'package:app_confeitaria/pages/MainPage.dart';
+import 'package:app_confeitaria/pages/main_page.dart';
 import 'package:app_confeitaria/service/auth_service.dart'; // Importe o AuthService
 import 'package:flutter/material.dart';
 import 'package:mask_text_input_formatter/mask_text_input_formatter.dart';
