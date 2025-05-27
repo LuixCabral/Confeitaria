@@ -77,7 +77,7 @@ class CartItem {
         name: json['name'] as String? ?? 'Produto Desconhecido',
         price: (json['price'] as num?)?.toDouble() ?? 0.0,
         imagePath: json['imagePath'] as String? ?? '',
-        category: json['category'] as String? ?? 'Uncategorized',
+        category: json['category'] as String? ?? 'Uncategorized', detalhes: '',
       ),
       quantity: json['quantity'] as int? ?? 1,
     );
