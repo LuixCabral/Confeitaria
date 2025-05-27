@@ -22,7 +22,7 @@ class Product {
       category: json['category'] as String? ?? 'Uncategorized',
       price: (json['price'] as num?)?.toDouble() ?? 0.0,
       imagePath: json['imagePath'] as String? ?? '',
-      detalhes: json['Detalhes'] as String? ?? 'Sem Detalhes do Produto'
+      detalhes: json['description'] as String? ?? 'Sem Detalhes do Produto'
     );
   }
 
@@ -44,6 +44,7 @@ class OrderProduct {
   final String category;
   final String imagePath;
   final int quantity;
+  final String description;
 
   OrderProduct({
     required this.id,
@@ -52,6 +53,8 @@ class OrderProduct {
     required this.category,
     required this.imagePath,
     required this.quantity,
+    required this.description
+
   });
 
   factory OrderProduct.fromJson(Map<String, dynamic> json) {
@@ -62,6 +65,7 @@ class OrderProduct {
       category: json['category'],
       imagePath: json['imagePath'],
       quantity: json['quantity'],
+      description: json['description']
     );
   }
 }

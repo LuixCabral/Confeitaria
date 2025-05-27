@@ -65,7 +65,7 @@ class CartItem {
 
   Map<String, dynamic> toJson() {
     return {
-      'productId': product.id, // Ajustado para corresponder ao backend
+      'productId': product.id,
       'quantity': quantity,
     };
   }
@@ -73,7 +73,7 @@ class CartItem {
   factory CartItem.fromJson(Map<String, dynamic> json) {
     return CartItem(
       product: Product(
-        id: json['productId'] as int? ?? 0, // Ajustado para corresponder ao backend
+        id: json['productId'] as int? ?? 0,
         name: json['name'] as String? ?? 'Produto Desconhecido',
         price: (json['price'] as num?)?.toDouble() ?? 0.0,
         imagePath: json['imagePath'] as String? ?? '',

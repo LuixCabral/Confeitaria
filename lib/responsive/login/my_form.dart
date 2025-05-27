@@ -1,5 +1,5 @@
 import 'package:app_confeitaria/pages/main_page.dart';
-import 'package:app_confeitaria/service/auth_service.dart'; // Importe o AuthService
+import 'package:app_confeitaria/service/auth_service.dart';
 import 'package:flutter/material.dart';
 import 'package:mask_text_input_formatter/mask_text_input_formatter.dart';
 
@@ -31,22 +31,7 @@ class _MyFormState extends State<MyForm> {
 
   Future<void> _handleLogin() async {
     if (phoneEditor.text.isEmpty || passwordEditor.text.isEmpty) {
-      showDialog(
-        context: context,
-        builder: (context) => AlertDialog(
-          title: const Text('Erro'),
-          content: const Text(
-            'Por favor, preencha o número de telefone e a senha.',
-            style: TextStyle(color: Colors.red),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(),
-              child: const Text('OK'),
-            ),
-          ],
-        ),
-      );
+      _showErrorDialog('Preencha o número de telefone e a senha.');
       return;
     }
 
@@ -55,18 +40,19 @@ class _MyFormState extends State<MyForm> {
     });
 
     try {
-      // Remove formatação do número de telefone antes de enviar
       final cleanPhone = phoneEditor.text.replaceAll(RegExp(r'[()\-\s]'), '');
       final token = await _authService.login(cleanPhone, passwordEditor.text);
 
       if (token != null) {
-        // Se "Lembrar-me" estiver marcado, o token já está salvo pelo AuthService
-        if (!_rememberMe) {
-          // Se "Lembrar-me" não estiver marcado, remove o token ao sair
-          // Isso será tratado no logout ou em uma lógica futura
-        }
-        // Navega para a MainPage
         if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: const Text('Login realizado com sucesso!'),
+              backgroundColor: Colors.green,
+              behavior: SnackBarBehavior.floating,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            ),
+          );
           Navigator.pushReplacement(
             context,
             MaterialPageRoute(builder: (context) => const MainPage()),
@@ -75,22 +61,7 @@ class _MyFormState extends State<MyForm> {
       }
     } catch (e) {
       if (mounted) {
-        showDialog(
-          context: context,
-          builder: (context) => AlertDialog(
-            title: const Text('Erro'),
-            content: Text(
-              e.toString().replaceFirst('Exception: ', ''),
-              style: const TextStyle(color: Colors.red),
-            ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.of(context).pop(),
-                child: const Text('OK'),
-              ),
-            ],
-          ),
-        );
+        _showErrorDialog(e.toString().replaceFirst('Exception: ', ''));
       }
     } finally {
       if (mounted) {
@@ -99,6 +70,29 @@ class _MyFormState extends State<MyForm> {
         });
       }
     }
+  }
+
+  void _showErrorDialog(String message) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: const Text(
+          'Erro',
+          style: TextStyle(fontWeight: FontWeight.bold, color: Colors.black87),
+        ),
+        content: Text(
+          message,
+          style: const TextStyle(color: Colors.red),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('OK', style: TextStyle(color: Colors.pink)),
+          ),
+        ],
+      ),
+    );
   }
 
   @override
@@ -111,111 +105,121 @@ class _MyFormState extends State<MyForm> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFBF927B),
-      body: Row(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Column(
-            mainAxisAlignment: MainAxisAlignment.start,
-            children: [
-              Padding(
-                padding: const EdgeInsets.all(8.0),
-                child: Container(
-                  height: 500,
-                  width: 375,
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    border: Border.all(color: Colors.grey),
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.center,
-                    children: [
-                      const SizedBox(height: 24),
-                      const Text(
-                        'Bem Vindo!!',
-                        style: TextStyle(
-                          color: Color(0xFFBF927B),
-                          fontSize: 22,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                      const SizedBox(height: 32),
-                      Padding(
-                        padding: const EdgeInsets.symmetric(
-                          vertical: 3.0,
-                          horizontal: 25.0,
-                        ),
-                        child: TextField(
-                          controller: phoneEditor,
-                          decoration: const InputDecoration(
-                            labelText: 'Número de Telefone',
-                            border: OutlineInputBorder(),
-                            prefixIcon: Icon(Icons.phone),
-                          ),
-                          keyboardType: TextInputType.phone,
-                          inputFormatters: [_phoneMaskFormatter],
-                        ),
-                      ),
-                      const SizedBox(height: 16),
-                      Padding(
-                        padding: const EdgeInsets.symmetric(
-                          vertical: 3.0,
-                          horizontal: 25.0,
-                        ),
-                        child: TextField(
-                          controller: passwordEditor,
-                          decoration: const InputDecoration(
-                            labelText: 'Senha',
-                            border: OutlineInputBorder(),
-                            prefixIcon: Icon(Icons.lock),
-                          ),
-                          obscureText: true,
-                        ),
-                      ),
-                      const SizedBox(height: 8),
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.start,
-                        children: [
-                          Padding(
-                            padding: const EdgeInsets.only(left: 25.0),
-                            child: Checkbox(
-                              value: _rememberMe,
-                              onChanged: _toggleRememberMe,
-                            ),
-                          ),
-                          const Text('Lembrar-me'),
-                        ],
-                      ),
-                      const SizedBox(height: 32),
-                      SizedBox(
-                        width: 150,
-                        height: 45,
-                        child: _isLoading
-                            ? const Center(child: CircularProgressIndicator())
-                            : ElevatedButton(
-                          onPressed: _handleLogin,
-                          style: ButtonStyle(
-                            shadowColor: WidgetStateProperty.all(const Color(0xFFBF927B)),
-                            shape: WidgetStateProperty.all(
-                              RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(8),
-                              ),
-                            ),
-                          ),
-                          child: const Text(
-                            'Login',
-                            style: TextStyle(fontSize: 18),
-                          ),
-                        ),
-                      ),
-                    ],
+      backgroundColor: Colors.grey[100],
+      body: Center(
+        child: Card(
+          elevation: 4,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          color: Colors.white,
+          child: Container(
+            width: 400,
+            padding: const EdgeInsets.all(24.0),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
+                const Text(
+                  'Bem-vindo!',
+                  style: TextStyle(
+                    color: Colors.pink,
+                    fontSize: 24,
+                    fontWeight: FontWeight.bold,
                   ),
                 ),
-              ),
-            ],
+                const SizedBox(height: 24),
+                TextField(
+                  controller: phoneEditor,
+                  decoration: InputDecoration(
+                    labelText: 'Telefone',
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: BorderSide.none,
+                    ),
+                    filled: true,
+                    fillColor: Colors.grey[100],
+                    prefixIcon: const Icon(Icons.phone, color: Colors.pink),
+                    labelStyle: const TextStyle(color: Colors.grey),
+                  ),
+                  keyboardType: TextInputType.phone,
+                  inputFormatters: [_phoneMaskFormatter],
+                ),
+                const SizedBox(height: 16),
+                TextField(
+                  controller: passwordEditor,
+                  decoration: InputDecoration(
+                    labelText: 'Senha',
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: BorderSide.none,
+                    ),
+                    filled: true,
+                    fillColor: Colors.grey[100],
+                    prefixIcon: const Icon(Icons.lock, color: Colors.pink),
+                    labelStyle: const TextStyle(color: Colors.grey),
+                  ),
+                  obscureText: true,
+                ),
+                const SizedBox(height: 12),
+                Row(
+                  children: [
+                    Checkbox(
+                      value: _rememberMe,
+                      onChanged: _toggleRememberMe,
+                      activeColor: Colors.pink,
+                    ),
+                    const Text(
+                      'Lembrar-me',
+                      style: TextStyle(color: Colors.black87),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 24),
+                ElevatedButton(
+                  onPressed: _isLoading ? null : _handleLogin,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.transparent,
+                    padding: EdgeInsets.zero,
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    elevation: 0,
+                    disabledBackgroundColor: Colors.grey[300],
+                  ),
+                  child: Ink(
+                    decoration: BoxDecoration(
+                      gradient: _isLoading
+                          ? null
+                          : const LinearGradient(
+                        colors: [Colors.pink, Colors.pinkAccent],
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                      ),
+                      color: _isLoading ? Colors.grey[300] : null,
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Container(
+                      width: 200,
+                      padding: const EdgeInsets.symmetric(vertical: 16),
+                      alignment: Alignment.center,
+                      child: _isLoading
+                          ? const CircularProgressIndicator(
+                        color: Colors.white,
+                        strokeWidth: 2,
+                      )
+                          : const Text(
+                        'Entrar',
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.white,
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 16),
+              ],
+            ),
           ),
-        ],
+        ),
       ),
     );
   }

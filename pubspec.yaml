@@ -46,11 +46,11 @@ dependencies:
   intl: ^0.20.2
   image_picker: ^1.1.2
   flutter_native_splash: ^2.4.6
-  flutter_launcher_icons: ^0.14.3
+
 dev_dependencies:
   flutter_test:
     sdk: flutter
-
+  flutter_launcher_icons: ^0.14.3
   # The "flutter_lints" package below contains a set of recommended lints to
   # encourage good coding practices. The lint set provided by the package is
   # activated in the `analysis_options.yaml` file located at the root of your
@@ -64,6 +64,8 @@ dev_dependencies:
 # The following section is specific to Flutter packages.
 flutter:
 
+  assets:
+    - assets/images/
   # The following line ensures that the Material Icons font is
   # included with your application, so that you can use the icons in
   # the material Icons class.
@@ -100,21 +102,19 @@ flutter:
   # For details regarding fonts from package dependencies,
   # see https://flutter.dev/to/font-from-package
 flutter_native_splash:
-  # Cor de fundo da sua tela de abertura
-  color: "#FFFFFF" # Branco
 
-  image: "assets/splash_logo.png"
+  color: "#FFF9F0"
 
-  # Para Android 12+ (opcional, mas recomendado)
+
+  image: "assets/app/splas.png"
+
+  # Para Android 12 e superior, há opções adicionais:
   android_12:
-    image: "assets/splash_logo_android12.png"
-    icon_background_color: "#FFFFFF"
-  android: true
-  ios: true
-  web: false
+    image: "assets/app/splas.png"
+    icon_background_color: "#FFF9F0"
 
 flutter_launcher_icons:
-  image_path: "assets/splash.png"
-  android: "launcher_icon"
-  adaptative_icon_background: "#FFFFFF"
-  adaptative_icon_foreground: "assets/splash_icon.png"
+  android: true
+  ios: true
+  image_path: "assets/app/icon_cake.png"
+  adaptive_icon_background: "#FFF9F0"

@@ -51,22 +51,7 @@ class _LoginMobileBodyState extends State<LoginMobileBody> {
 
   Future<void> _handleLogin() async {
     if (phoneEditor.text.isEmpty || passwordEditor.text.isEmpty) {
-      showDialog(
-        context: context,
-        builder: (context) => AlertDialog(
-          title: const Text('Erro'),
-          content: const Text(
-            'Por favor, preencha o número de telefone e a senha.',
-            style: TextStyle(color: Colors.red),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(),
-              child: const Text('OK'),
-            ),
-          ],
-        ),
-      );
+      _showErrorDialog('Preencha o número de telefone e a senha.');
       return;
     }
 
@@ -82,7 +67,12 @@ class _LoginMobileBodyState extends State<LoginMobileBody> {
         final userName = await _authService.getUserName();
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Bem-vindo, ${userName ?? 'Usuário'}!')),
+            SnackBar(
+              content: Text('Bem-vindo, ${userName ?? 'Usuário'}!'),
+              backgroundColor: Colors.green,
+              behavior: SnackBarBehavior.floating,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            ),
           );
           await _saveRememberMePreference();
           Navigator.pushReplacement(
@@ -93,22 +83,7 @@ class _LoginMobileBodyState extends State<LoginMobileBody> {
       }
     } catch (e) {
       if (mounted) {
-        showDialog(
-          context: context,
-          builder: (context) => AlertDialog(
-            title: const Text('Erro'),
-            content: Text(
-              e.toString().replaceFirst('Exception: ', ''),
-              style: const TextStyle(color: Colors.red),
-            ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.of(context).pop(),
-                child: const Text('OK'),
-              ),
-            ],
-          ),
-        );
+        _showErrorDialog(e.toString().replaceFirst('Exception: ', ''));
       }
     } finally {
       if (mounted) {
@@ -117,6 +92,29 @@ class _LoginMobileBodyState extends State<LoginMobileBody> {
         });
       }
     }
+  }
+
+  void _showErrorDialog(String message) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: const Text(
+          'Erro',
+          style: TextStyle(fontWeight: FontWeight.bold, color: Colors.black87),
+        ),
+        content: Text(
+          message,
+          style: const TextStyle(color: Colors.red),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('OK', style: TextStyle(color: Colors.pink)),
+          ),
+        ],
+      ),
+    );
   }
 
   @override
@@ -128,125 +126,126 @@ class _LoginMobileBodyState extends State<LoginMobileBody> {
 
   @override
   Widget build(BuildContext context) {
-    // Obtém as dimensões da tela
     final screenWidth = MediaQuery.of(context).size.width;
-    final screenHeight = MediaQuery.of(context).size.height;
 
     return Scaffold(
-      backgroundColor: const Color(0xFFBF927B),
+      backgroundColor: Colors.grey[100], // Matches app theme
       body: SafeArea(
         child: Center(
           child: SingleChildScrollView(
             child: Padding(
-              padding: const EdgeInsets.all(8.0),
-              child: Container(
-                // Ajusta a largura com base no tamanho da tela, com um máximo de 375
-                width: screenWidth > 375 ? 375 : screenWidth * 0.9,
-                // Remove a altura fixa para evitar overflow
-                padding: const EdgeInsets.symmetric(vertical: 16.0),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  border: Border.all(color: Colors.grey),
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min, // Ajusta o tamanho ao conteúdo
-                  crossAxisAlignment: CrossAxisAlignment.center,
-                  children: [
-                    const SizedBox(height: 24),
-                    const Text(
-                      'Bem Vindo!!',
-                      style: TextStyle(
-                        color: Colors.pinkAccent,
-                        fontSize: 22,
-                        fontWeight: FontWeight.bold,
+              padding: const EdgeInsets.all(16.0),
+              child: Card(
+                elevation: 4,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                color: Colors.white,
+                child: Container(
+                  width: screenWidth > 400 ? 400 : screenWidth * 0.9,
+                  padding: const EdgeInsets.all(24.0),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.center,
+                    children: [
+                      const Text(
+                        'Bem-vindo!',
+                        style: TextStyle(
+                          color: Colors.pink,
+                          fontSize: 24,
+                          fontWeight: FontWeight.bold,
+                        ),
                       ),
-                    ),
-                    const SizedBox(height: 32),
-                    Padding(
-                      padding: const EdgeInsets.symmetric(
-                        vertical: 3.0,
-                        horizontal: 25.0,
-                      ),
-                      child: TextField(
+                      const SizedBox(height: 24),
+                      TextField(
                         controller: phoneEditor,
-                        decoration: const InputDecoration(
-                          labelText: 'Número de Telefone',
-                          border: OutlineInputBorder(),
-                          prefixIcon: Icon(Icons.phone),
+                        decoration: InputDecoration(
+                          labelText: 'Telefone',
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                            borderSide: BorderSide.none,
+                          ),
+                          filled: true,
+                          fillColor: Colors.grey[100],
+                          prefixIcon: const Icon(Icons.phone, color: Colors.pink),
+                          labelStyle: const TextStyle(color: Colors.grey),
                         ),
                         keyboardType: TextInputType.phone,
                         inputFormatters: [_phoneMaskFormatter],
                       ),
-                    ),
-                    const SizedBox(height: 16),
-                    Padding(
-                      padding: const EdgeInsets.symmetric(
-                        vertical: 3.0,
-                        horizontal: 25.0,
-                      ),
-                      child: TextField(
+                      const SizedBox(height: 16),
+                      TextField(
                         controller: passwordEditor,
-                        decoration: const InputDecoration(
+                        decoration: InputDecoration(
                           labelText: 'Senha',
-                          border: OutlineInputBorder(),
-                          prefixIcon: Icon(Icons.lock),
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                            borderSide: BorderSide.none,
+                          ),
+                          filled: true,
+                          fillColor: Colors.grey[100],
+                          prefixIcon: const Icon(Icons.lock, color: Colors.pink),
+                          labelStyle: const TextStyle(color: Colors.grey),
                         ),
                         obscureText: true,
                       ),
-                    ),
-                    const SizedBox(height: 8),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.start,
-                      children: [
-                        Padding(
-                          padding: const EdgeInsets.only(left: 25.0),
-                          child: Checkbox(
+                      const SizedBox(height: 12),
+                      Row(
+                        children: [
+                          Checkbox(
                             value: _rememberMe,
                             onChanged: _toggleRememberMe,
+                            activeColor: Colors.pink,
                           ),
-                        ),
-                        const Text('Lembrar-me'),
-                      ],
-                    ),
-                    const SizedBox(height: 32),
-                    SizedBox(
-                      width: 150,
-                      height: 45,
-                      child: ElevatedButton(
+                          const Text(
+                            'Lembrar-me',
+                            style: TextStyle(color: Colors.black87),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 24),
+                      ElevatedButton(
                         onPressed: _isLoading ? null : _handleLogin,
-                        style: ButtonStyle(
-                          backgroundColor: WidgetStateProperty.resolveWith<Color>(
-                                (states) {
-                              if (states.contains(WidgetState.disabled)) {
-                                return Colors.grey;
-                              }
-                              return Colors.pinkAccent;
-                            },
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.transparent,
+                          padding: EdgeInsets.zero,
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                          elevation: 0,
+                          disabledBackgroundColor: Colors.grey[300],
+                        ),
+                        child: Ink(
+                          decoration: BoxDecoration(
+                            gradient: _isLoading
+                                ? null
+                                : const LinearGradient(
+                              colors: [Colors.pink, Colors.pinkAccent],
+                              begin: Alignment.topLeft,
+                              end: Alignment.bottomRight,
+                            ),
+                            color: _isLoading ? Colors.grey[300] : null,
+                            borderRadius: BorderRadius.circular(12),
                           ),
-                          shadowColor: WidgetStateProperty.all(const Color(0xFFBF927B)),
-                          shape: WidgetStateProperty.all(
-                            RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(8),
+                          child: Container(
+                            width: 200,
+                            padding: const EdgeInsets.symmetric(vertical: 16),
+                            alignment: Alignment.center,
+                            child: _isLoading
+                                ? const CircularProgressIndicator(
+                              color: Colors.white,
+                              strokeWidth: 2,
+                            )
+                                : const Text(
+                              'Entrar',
+                              style: TextStyle(
+                                fontSize: 18,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.white,
+                              ),
                             ),
                           ),
                         ),
-                        child: _isLoading
-                            ? const CircularProgressIndicator(
-                          color: Colors.white,
-                          strokeWidth: 2,
-                        )
-                            : const Text(
-                          'Login',
-                          style: TextStyle(
-                            fontSize: 18,
-                            color: Colors.white,
-                          ),
-                        ),
                       ),
-                    ),
-                    const SizedBox(height: 16), // Espaço extra no final
-                  ],
+                      const SizedBox(height: 16),
+                    ],
+                  ),
                 ),
               ),
             ),

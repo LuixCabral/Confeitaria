@@ -6,57 +6,127 @@ import '../providers/cart_provider.dart'; // Adjust the import path as needed
 class BottomNavBar extends StatelessWidget {
   final int currentIndex;
   final Function(int) onTabTapped;
+  final int cartItemCount;
 
   const BottomNavBar({
     super.key,
     required this.currentIndex,
     required this.onTabTapped,
+    this.cartItemCount = 0,
   });
 
   @override
   Widget build(BuildContext context) {
-    final cartItems = Provider.of<CartProvider>(context).cartItems;
+    return Container(
+      decoration: BoxDecoration(
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.1),
+            blurRadius: 8,
+            offset: const Offset(0, -2),
+          ),
+        ],
+      ),
+      child: CurvedNavigationBar(
+        index: currentIndex,
+        backgroundColor: Colors.white, // Matches MainPage background
+        color: Colors.pink[50]!, // Soft pink for the bar
+        buttonBackgroundColor: Colors.pink, // Bright pink for selected item
+        animationDuration: const Duration(milliseconds: 400),
+        animationCurve: Curves.easeInOut,
+        height: 65, // Slightly taller for labels
+        items: [
+          _buildNavItem(
+            icon: Icons.home,
+            label: 'Início',
+            isSelected: currentIndex == 0,
+          ),
+          _buildNavItem(
+            icon: Icons.shopping_cart,
+            label: 'Carrinho',
+            isSelected: currentIndex == 1,
+            badgeCount: cartItemCount,
+          ),
+          _buildNavItem(
+            icon: Icons.delivery_dining,
+            label: 'Pedidos',
+            isSelected: currentIndex == 2,
+          ),
+          _buildNavItem(
+            icon: Icons.person,
+            label: 'Perfil',
+            isSelected: currentIndex == 3,
+          ),
+        ],
+        onTap: onTabTapped,
+        letIndexChange: (index) => true,
+      ),
+    );
+  }
 
-    return CurvedNavigationBar(
-      index: currentIndex,
-      backgroundColor: const Color(0xFFF5E8E4),
-      color: const Color(0xFFBF927B),
-      buttonBackgroundColor: Colors.white,
-      animationDuration: const Duration(milliseconds: 300),
-      items: [
-        const Icon(Icons.home, size: 30, color: Colors.black54),
-        Stack(
+  Widget _buildNavItem({
+    required IconData icon,
+    required String label,
+    required bool isSelected,
+    int badgeCount = 0,
+  }) {
+    return Stack(
+      clipBehavior: Clip.none,
+      alignment: Alignment.center,
+      // Adicionado para melhor centralização do conteúdo
+      children: [
+        Column(
+          mainAxisAlignment: MainAxisAlignment.center, // Alterado para center
+          mainAxisSize: MainAxisSize.min,
           children: [
-            const Icon(Icons.shopping_cart, size: 30, color: Colors.black54),
-            if (cartItems.isNotEmpty)
-              Positioned(
-                right: 0,
-                child: Container(
-                  padding: const EdgeInsets.all(2),
-                  decoration: BoxDecoration(
-                    color: Colors.red,
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                  constraints: const BoxConstraints(
-                    minWidth: 16,
-                    minHeight: 16,
-                  ),
-                  child: Text(
-                    cartItems.length.toString(),
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 10,
-                    ),
-                    textAlign: TextAlign.center,
-                  ),
-                ),
+            Icon(
+              icon,
+              size: 28, // Reduzido de 30 (experimente 26 ou 28)
+              color: isSelected ? Colors.white : Colors.grey[700],
+            ),
+            const SizedBox(height: 2), // Reduzido de 4 (experimente 1, 2 ou 3)
+            Text(
+              label,
+              style: TextStyle(
+                fontSize: 10, // Reduzido de 12 (experimente 10 ou 11)
+                fontWeight: FontWeight.w600,
+                color: isSelected ? Colors.white : Colors.grey[700],
               ),
+              textAlign: TextAlign.center,
+              // Garante que o texto esteja centralizado
+              maxLines: 1,
+              // Evita quebra de linha se o texto for muito longo
+              overflow: TextOverflow
+                  .ellipsis, // Adiciona "..." se o texto ainda for muito longo
+            ),
           ],
         ),
-        const Icon(Icons.delivery_dining, size: 30, color: Colors.black54),
-        const Icon(Icons.person, size: 30, color: Colors.black54),
+        if (badgeCount > 0)
+          Positioned(
+            right: -8, // Ajustado ligeiramente (era -10)
+            top: -8, // Ajustado ligeiramente (era -10)
+            child: Container(
+              padding: const EdgeInsets.all(4),
+              // Levemente ajustado (era 5)
+              decoration: BoxDecoration(
+                color: Colors.red[400],
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: Colors.white, width: 1.5),
+              ),
+              constraints: const BoxConstraints(minWidth: 20, minHeight: 20),
+              // Levemente ajustado (era 22)
+              child: Text(
+                '$badgeCount',
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 10, // Levemente ajustado (era 12)
+                  fontWeight: FontWeight.bold,
+                ),
+                textAlign: TextAlign.center,
+              ),
+            ),
+          ),
       ],
-      onTap: onTabTapped,
     );
   }
 }

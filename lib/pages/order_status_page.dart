@@ -1,5 +1,5 @@
 import 'dart:async';
-import 'package:app_confeitaria/localdata/database_helper.dart';
+import 'package:app_confeitaria/localdata/database_helper.dart'; // Verifique se este caminho está correto
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
@@ -10,6 +10,8 @@ class OrderStatusPage extends StatefulWidget {
   final String orderDate;
   final List<Map<String, dynamic>> products;
   final double totalPrice;
+  final String address;
+  final VoidCallback onNavigateToHome;
 
   const OrderStatusPage({
     super.key,
@@ -19,6 +21,8 @@ class OrderStatusPage extends StatefulWidget {
     required this.orderDate,
     required this.products,
     required this.totalPrice,
+    required this.address,
+    required this.onNavigateToHome,
   });
 
   @override
@@ -27,85 +31,107 @@ class OrderStatusPage extends StatefulWidget {
 
 class _OrderStatusPageState extends State<OrderStatusPage> {
   late String _currentStatus;
-  late Timer _statusTimer;
+  Timer? _statusTimer;
+  final List<String> _statusSequence = const ['enviado', 'em preparo', 'saiu para entrega', 'entregue'];
+
 
   @override
   void initState() {
     super.initState();
-    // Validar o status inicial
-    const List<String> statusSequence = [
-      'enviado',
-      'em preparo',
-      'saiu para entrega',
-      'entregue'
-    ];
     _currentStatus = widget.orderStatus.toLowerCase();
 
-    // Se o status não estiver na sequência ou for 'nenhum', definir como 'enviado'
-    if (_currentStatus == 'nenhum' || !statusSequence.contains(_currentStatus)) {
-      _currentStatus = 'enviado'; // Valor padrão
+    // Ajusta o status inicial se necessário e se houver produtos
+    if (widget.products.isNotEmpty) {
+      if (_currentStatus == 'nenhum' || !_statusSequence.contains(_currentStatus)) {
+        // Se o status for 'nenhum' ou inválido, mas temos produtos,
+        // assume-se que o pedido acabou de ser feito e o status inicial é 'enviado'.
+        _currentStatus = 'enviado';
+      }
+      // Inicia a simulação se o status atual não for 'entregue'
+      // e se o status for um dos estágios válidos da sequência.
+      if (_statusSequence.contains(_currentStatus) && _currentStatus != 'entregue') {
+        _startStatusSimulation();
+      }
     }
-
-    if (_currentStatus != 'nenhum') {
-      _startStatusSimulation();
-    }
+    // Se não houver produtos, a tela de "Nenhum pedido ativo" será mostrada.
   }
 
   @override
   void dispose() {
-    if (_currentStatus != 'nenhum') {
-      _statusTimer.cancel();
-    }
+    _statusTimer?.cancel();
     super.dispose();
   }
 
   void _startStatusSimulation() {
-    const List<String> statusSequence = [
-      'enviado',
-      'em preparo',
-      'saiu para entrega',
-      'entregue'
-    ];
-    int currentIndex = statusSequence.indexOf(_currentStatus);
+    // Não simula se não estiver montado, não houver produtos, ou se o status atual não estiver na sequência esperada.
+    if (!mounted || widget.products.isEmpty || !_statusSequence.contains(_currentStatus)) return;
+
+    int currentIndex = _statusSequence.indexOf(_currentStatus);
+
+    // Não prossegue se o status atual for 'entregue' (último item da sequência) ou inválido.
+    if (currentIndex < 0 || currentIndex >= _statusSequence.length - 1) {
+      return;
+    }
+
     final DatabaseHelper dbHelper = DatabaseHelper.instance;
 
     _statusTimer = Timer.periodic(const Duration(seconds: 5), (timer) async {
-      if (currentIndex < statusSequence.length - 1) {
-        setState(() {
-          currentIndex++;
-          _currentStatus = statusSequence[currentIndex];
-        });
+      if (!mounted) {
+        timer.cancel();
+        return;
+      }
 
-        // When status is 'entregue', save the order to the database
-        if (_currentStatus == 'entregue') {
-          try {
-            // Retrieve userId (assuming a single user for simplicity)
-            List<Map<String, dynamic>> users = await dbHelper.getUser();
-            int userId = users.isNotEmpty ? users[0]['id'] : 1; // Fallback to 1 if no user
+      // Avança para o próximo status na sequência
+      if (currentIndex < _statusSequence.length - 1) {
+        currentIndex++;
+        if (mounted) {
+          setState(() {
+            _currentStatus = _statusSequence[currentIndex];
+          });
+        }
 
-            // Convert orderDate to ISO 8601 format
-            final DateTime orderDateTime = DateTime.parse(widget.orderDate);
-            final String isoDateTime = orderDateTime.toIso8601String();
+        // Tenta persistir a atualização do pedido no banco de dados.
+        // IMPORTANTE: Se dbHelper.insertOrder sempre cria um NOVO registro,
+        // isso pode não ser o ideal para ATUALIZAR um pedido existente.
+        // Considere ter um método dbHelper.updateOrderStatus(orderCode, newStatus)
+        // ou garantir que insertOrder faça um "upsert".
+        try {
+          List<Map<String, dynamic>> users = await dbHelper.getUser();
+          int userId = users.isNotEmpty ? users[0]['id'] : 1; // Considere um fallback melhor
 
-            // Prepare order data
-            await dbHelper.insertOrder(
-              userId: userId,
-              orderNumber: widget.orderCode, // Using orderCode as orderNumber
-              orderCode: widget.orderCode,
-              status: _currentStatus,
-              dateTime: isoDateTime, // Use ISO 8601 format
-              address: '', // No address provided in widget; using empty string
-              total: widget.totalPrice,
-              name: widget.name,
-              items: widget.products,
+          final DateTime orderDateTime = DateTime.parse(widget.orderDate);
+          final String isoDateTime = orderDateTime.toIso8601String(); // Data original do pedido
+
+          await dbHelper.insertOrder(
+            userId: userId,
+            orderNumber: widget.orderCode, // Usado para identificar o pedido a ser atualizado/inserido
+            orderCode: widget.orderCode,
+            status: _currentStatus,
+            dateTime: isoDateTime, // Ou DateTime.now().toIso8601String() para data da atualização do status
+            address: widget.address,
+            total: widget.totalPrice,
+            name: widget.name,
+            items: widget.products,
+          );
+        } catch (e) {
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text('Erro ao atualizar pedido no banco: $e'),
+                backgroundColor: Colors.redAccent,
+                behavior: SnackBarBehavior.floating,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+              ),
             );
-            print('Order saved to database');
-          } catch (e) {
-            print('Error saving order: $e');
           }
+        }
+
+        // Se o novo status for 'entregue', para o timer.
+        if (_currentStatus == 'entregue') {
           timer.cancel();
         }
       } else {
+        // Se já estiver no último status ou além, para o timer.
         timer.cancel();
       }
     });
@@ -114,169 +140,178 @@ class _OrderStatusPageState extends State<OrderStatusPage> {
   IconData _getStatusIcon(String status) {
     switch (status) {
       case 'enviado':
-        return Icons.send;
+        return Icons.receipt_long_outlined;
       case 'em preparo':
-        return Icons.kitchen;
+        return Icons.soup_kitchen_outlined;
       case 'saiu para entrega':
-        return Icons.delivery_dining;
+        return Icons.local_shipping_outlined;
       case 'entregue':
-        return Icons.check_circle;
+        return Icons.check_circle_outline_rounded;
       default:
-        return Icons.info;
+        return Icons.help_outline_rounded;
     }
   }
 
   Color _getStatusColor(String status) {
     switch (status) {
       case 'enviado':
-        return Colors.blue;
-      case 'preparing':
-        return Colors.orange;
+        return Colors.blue.shade600;
+      case 'em preparo':
+        return Colors.orange.shade600;
       case 'saiu para entrega':
-        return Colors.purple;
+        return Colors.purple.shade600;
       case 'entregue':
-        return Colors.green;
+        return Colors.green.shade600;
       default:
-        return Colors.grey;
+        return Colors.grey.shade600;
     }
+  }
+
+  String _capitalize(String s) {
+    if (s.isEmpty) return s;
+    return s[0].toUpperCase() + s.substring(1);
   }
 
   @override
   Widget build(BuildContext context) {
-    if (widget.products.isEmpty || _currentStatus == 'nenhum') {
-      return Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            const Icon(
-              Icons.info_outline,
-              size: 80,
-              color: Colors.grey,
-            ),
-            const SizedBox(height: 16),
-            const Text(
-              'Nenhum pedido ativo',
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 16),
-          ],
+    // Se não há produtos ou o status é 'nenhum' (e não foi ajustado no initState), mostra tela de nenhum pedido.
+    if (widget.products.isEmpty || (_currentStatus == 'nenhum' && widget.orderStatus.toLowerCase() == 'nenhum')) {
+      return Scaffold(
+        backgroundColor: Colors.grey[100],
+        body: Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const Icon(
+                Icons.info_outline_rounded,
+                size: 100,
+                color: Colors.grey,
+              ),
+              const SizedBox(height: 16),
+              const Text(
+                'Nenhum pedido ativo',
+                style: TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.black87,
+                ),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                'Faça um novo pedido agora!',
+                style: TextStyle(
+                  fontSize: 16,
+                  color: Colors.grey[600],
+                ),
+              ),
+              const SizedBox(height: 24),
+              ElevatedButton(
+                onPressed: widget.onNavigateToHome,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.transparent,
+                  padding: EdgeInsets.zero,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  elevation: 0,
+                ),
+                child: Ink(
+                  decoration: BoxDecoration(
+                    gradient: const LinearGradient(
+                      colors: [Colors.pink, Colors.pinkAccent],
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                    ),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+                    child: const Text(
+                      'Ir para a Loja',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.white,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
         ),
       );
     }
 
-    // Formatar a data para exibição
     final DateFormat dateFormat = DateFormat('dd/MM/yyyy HH:mm');
     final DateTime orderDateTime = DateTime.parse(widget.orderDate).toLocal();
     final String formattedDate = dateFormat.format(orderDateTime);
 
     return Scaffold(
+      backgroundColor: Colors.grey[100],
       appBar: AppBar(
-        title: const Text('Status do Pedido'),
-        backgroundColor: Colors.pink,
-        foregroundColor: Colors.white,
+        backgroundColor: Colors.grey[100],
+        elevation: 0,
+        title: const Text(
+          'Status do Pedido',
+          style: TextStyle(
+            color: Colors.black87,
+            fontSize: 20,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back_ios_new_rounded, color: Colors.black87),
+          onPressed: widget.onNavigateToHome,
+        ),
       ),
       body: Padding(
         padding: const EdgeInsets.all(16.0),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Nome do Cliente
             Card(
-              elevation: 4,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
-              ),
+              elevation: 3,
+              shadowColor: Colors.grey.withOpacity(0.2),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+              color: Colors.white,
               child: Padding(
                 padding: const EdgeInsets.all(16.0),
-                child: Row(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Icon(Icons.person, color: Colors.pink),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: Text(
-                        'Cliente: ${widget.name}',
-                        style: const TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ),
+                    _buildInfoRow(Icons.person_outline_rounded, 'Cliente', widget.name),
+                    const Divider(height: 20, thickness: 0.5, color: Colors.grey),
+                    _buildInfoRow(Icons.confirmation_number_outlined, 'Código', widget.orderCode),
+                    const Divider(height: 20, thickness: 0.5, color: Colors.grey),
+                    _buildInfoRow(Icons.calendar_today_outlined, 'Data', formattedDate),
+                    if (widget.address.isNotEmpty) ...[
+                      const Divider(height: 20, thickness: 0.5, color: Colors.grey),
+                      _buildInfoRow(Icons.location_on_outlined, 'Endereço', widget.address),
+                    ],
                   ],
                 ),
               ),
             ),
             const SizedBox(height: 16),
-
-            // Código do Pedido
             Card(
-              elevation: 4,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: Padding(
-                padding: const EdgeInsets.all(16.0),
-                child: Row(
-                  children: [
-                    const Icon(Icons.receipt, color: Colors.pink),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: Text(
-                        'Código do Pedido: ${widget.orderCode}',
-                        style: const TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-            const SizedBox(height: 16),
-
-            // Data do Pedido
-            Card(
-              elevation: 4,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: Padding(
-                padding: const EdgeInsets.all(16.0),
-                child: Row(
-                  children: [
-                    const Icon(Icons.calendar_today, color: Colors.pink),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: Text(
-                        'Data do Pedido: $formattedDate',
-                        style: const TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-            const SizedBox(height: 16),
-
-            // Status Atual com Ícone Animado
-            Card(
-              elevation: 4,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
-              ),
+              elevation: 3,
+              shadowColor: Colors.grey.withOpacity(0.2),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+              color: Colors.white,
               child: Padding(
                 padding: const EdgeInsets.all(16.0),
                 child: Row(
                   children: [
                     AnimatedContainer(
                       duration: const Duration(milliseconds: 500),
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: _getStatusColor(_currentStatus).withOpacity(0.1),
+                        shape: BoxShape.circle,
+                      ),
                       child: Icon(
                         _getStatusIcon(_currentStatus),
                         color: _getStatusColor(_currentStatus),
-                        size: 40,
+                        size: 32,
                       ),
                     ),
                     const SizedBox(width: 16),
@@ -285,14 +320,15 @@ class _OrderStatusPageState extends State<OrderStatusPage> {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           const Text(
-                            'Status Atual:',
+                            'Status Atual',
                             style: TextStyle(
-                              fontSize: 16,
+                              fontSize: 14,
                               fontWeight: FontWeight.w600,
+                              color: Colors.grey,
                             ),
                           ),
                           Text(
-                            _currentStatus.toUpperCase(),
+                            _capitalize(_currentStatus),
                             style: TextStyle(
                               fontSize: 18,
                               fontWeight: FontWeight.bold,
@@ -307,18 +343,21 @@ class _OrderStatusPageState extends State<OrderStatusPage> {
               ),
             ),
             const SizedBox(height: 16),
-
-            // Linha do Tempo do Status
             Expanded(
               child: ListView(
+                physics: const BouncingScrollPhysics(),
                 children: [
                   _buildTimeline(),
-                  const SizedBox(height: 16),
+                  const SizedBox(height: 20),
                   const Text(
-                    'Itens do Pedido:',
-                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+                    'Itens do Pedido',
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.black87,
+                    ),
                   ),
-                  const SizedBox(height: 8),
+                  const SizedBox(height: 10),
                   ListView.builder(
                     shrinkWrap: true,
                     physics: const NeverScrollableScrollPhysics(),
@@ -327,45 +366,66 @@ class _OrderStatusPageState extends State<OrderStatusPage> {
                       final product = widget.products[index];
                       return Card(
                         elevation: 2,
-                        margin: const EdgeInsets.symmetric(vertical: 4.0),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(8),
-                        ),
+                        margin: const EdgeInsets.symmetric(vertical: 8),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                        color: Colors.white,
                         child: Padding(
-                          padding: const EdgeInsets.all(8.0),
+                          padding: const EdgeInsets.all(12.0),
                           child: Row(
                             children: [
                               ClipRRect(
                                 borderRadius: BorderRadius.circular(8),
                                 child: Image.asset(
-                                  product['imagePath'],
-                                  width: 50,
-                                  height: 50,
+                                  product['imagePath'] ?? 'assets/images/placeholder.png',
+                                  width: 60,
+                                  height: 60,
                                   fit: BoxFit.cover,
                                   errorBuilder: (context, error, stackTrace) {
                                     return Container(
-                                      color: Colors.grey[300],
-                                      child: const Center(
-                                        child: Icon(
-                                          Icons.image_not_supported,
-                                          size: 50,
-                                          color: Colors.grey,
-                                        ),
+                                      width: 60,
+                                      height: 60,
+                                      color: Colors.grey[200],
+                                      child: const Icon( // Correção aqui
+                                        Icons.image_not_supported_outlined,
+                                        color: Colors.grey,
+                                        size: 30,
                                       ),
                                     );
                                   },
                                 ),
                               ),
-                              const SizedBox(width: 16),
+                              const SizedBox(width: 12),
                               Expanded(
-                                child: Text(
-                                  "${product['name']} (x${product['quantity']})",
-                                  style: const TextStyle(fontSize: 15),
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      product['name'] ?? 'Produto',
+                                      style: const TextStyle(
+                                        fontSize: 16,
+                                        fontWeight: FontWeight.w600,
+                                        color: Colors.black87,
+                                      ),
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                    Text(
+                                      'x${product['quantity']}',
+                                      style: TextStyle(
+                                        fontSize: 14,
+                                        color: Colors.grey[600],
+                                      ),
+                                    ),
+                                  ],
                                 ),
                               ),
                               Text(
                                 'R\$${(product['price'] * product['quantity']).toStringAsFixed(2).replaceAll('.', ',')}',
-                                style: const TextStyle(fontSize: 15),
+                                style: const TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.w600,
+                                  color: Colors.pink,
+                                ),
                               ),
                             ],
                           ),
@@ -375,26 +435,26 @@ class _OrderStatusPageState extends State<OrderStatusPage> {
                   ),
                   const SizedBox(height: 16),
                   Card(
-                    elevation: 4,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
+                    elevation: 3,
+                    shadowColor: Colors.grey.withOpacity(0.2),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
                     child: Padding(
                       padding: const EdgeInsets.all(16.0),
                       child: Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
                           const Text(
-                            'Total:',
+                            'Total do Pedido',
                             style: TextStyle(
                               fontSize: 18,
                               fontWeight: FontWeight.bold,
+                              color: Colors.black87,
                             ),
                           ),
                           Text(
                             'R\$${widget.totalPrice.toStringAsFixed(2).replaceAll('.', ',')}',
                             style: const TextStyle(
-                              fontSize: 18,
+                              fontSize: 20, // Aumentado para destaque
                               fontWeight: FontWeight.bold,
                               color: Colors.pink,
                             ),
@@ -403,121 +463,215 @@ class _OrderStatusPageState extends State<OrderStatusPage> {
                       ),
                     ),
                   ),
+                  const SizedBox(height: 16),
                 ],
               ),
             ),
-
-            // Botão para Voltar à Loja
             if (_currentStatus == 'entregue')
               Padding(
-                padding: const EdgeInsets.symmetric(vertical: 16.0),
-                child: Center(
-
+                padding: const EdgeInsets.only(top: 8.0, bottom: 16.0), // Padding inferior ajustado
+                child: ElevatedButton(
+                  onPressed: widget.onNavigateToHome,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.transparent,
+                    padding: EdgeInsets.zero,
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)), // Consistente com outros botões
+                    elevation: 0,
+                    minimumSize: const Size(double.infinity, 50),
+                  ),
+                  child: Ink(
+                    decoration: BoxDecoration(
+                        gradient: const LinearGradient(
+                          colors: [Colors.pink, Colors.pinkAccent],
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                        ),
+                        borderRadius: BorderRadius.circular(12), // Consistente
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.pink.withOpacity(0.3),
+                            blurRadius: 8,
+                            offset: const Offset(0, 4),
+                          ),
+                        ]),
+                    child: Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.symmetric(vertical: 16),
+                      alignment: Alignment.center,
+                      child: const Text(
+                        'Voltar à Loja',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.white,
+                        ),
+                      ),
+                    ),
+                  ),
                 ),
               ),
-
           ],
         ),
       ),
     );
   }
 
-  Widget _buildTimeline() {
-    const List<String> statusSequence = [
-      'enviado',
-      'em preparo',
-      'saiu para entrega',
-      'entregue'
-    ];
-    int currentIndex = statusSequence.indexOf(_currentStatus);
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: List.generate(statusSequence.length, (index) {
-        bool isCompleted = index <= currentIndex;
-        bool isCurrent = index == currentIndex;
-
-        return Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Column(
-              children: [
-                AnimatedContainer(
-                  duration: const Duration(milliseconds: 500),
-                  width: 24,
-                  height: 24,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    color: isCompleted ? Colors.pink : Colors.grey[300],
-                    border: Border.all(
-                      color: isCompleted ? Colors.pink : Colors.grey,
-                      width: 2,
-                    ),
-                  ),
-                  child: isCompleted
-                      ? const Icon(
-                    Icons.check,
-                    size: 16,
-                    color: Colors.white,
-                  )
-                      : null,
-                ),
-                if (index < statusSequence.length - 1)
-                  AnimatedContainer(
-                    duration: const Duration(milliseconds: 500),
-                    width: 2,
-                    height: 40,
-                    color: isCompleted ? Colors.pink : Colors.grey[300],
-                  ),
-
-              ],
-            ),
-            const SizedBox(width: 16),
-            Expanded(
-              child: Padding(
-                padding: const EdgeInsets.symmetric(vertical: 8.0),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      statusSequence[index].toUpperCase(),
-                      style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: isCurrent
-                            ? FontWeight.bold
-                            : FontWeight.normal,
-                        color: isCompleted ? Colors.black : Colors.grey,
-                      ),
-                    ),
-                    Text(
-                      _getStatusDescription(statusSequence[index]),
-                      style: TextStyle(
-                        fontSize: 14,
-                        color: isCompleted ? Colors.black54 : Colors.grey,
-                      ),
-                    ),
-                  ],
+  Widget _buildInfoRow(IconData icon, String label, String value) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start, // Melhor alinhamento para textos multilinhas
+      children: [
+        Icon(icon, color: Colors.pink.shade400, size: 22),
+        const SizedBox(width: 12),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                label,
+                style: TextStyle( // Ajustado para consistência
+                  fontSize: 14,
+                  fontWeight: FontWeight.normal,
+                  color: Colors.grey[700], // Um pouco mais escuro para contraste
                 ),
               ),
-            ),
-          ],
-        );
-      }),
+              const SizedBox(height: 2), // Espaço entre label e value
+              Text(
+                value,
+                style: const TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w600, // Menos bold que o total
+                  color: Colors.black87,
+                ),
+                softWrap: true, // Permite quebra de linha se o valor for longo
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildTimeline() {
+    final int currentIndexInSequence = _statusSequence.indexOf(_currentStatus);
+
+    return Card(
+      elevation: 3,
+      shadowColor: Colors.grey.withOpacity(0.2),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 20.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: List.generate(_statusSequence.length, (index) {
+            final bool isCompleted = index <= currentIndexInSequence;
+            final bool isCurrent = index == currentIndexInSequence;
+
+            // Cores e pesos para os elementos da timeline
+            Color circleColor = isCompleted ? Colors.pink : Colors.grey.shade200;
+            Color borderColor = isCompleted ? Colors.pink : Colors.grey.shade400;
+            Color lineColor = index < currentIndexInSequence ? Colors.pink : Colors.grey.shade200;
+            Color titleColor = isCompleted ? Colors.black87 : Colors.grey.shade500;
+            FontWeight titleWeight = isCurrent ? FontWeight.bold : FontWeight.w600;
+            Color descriptionColor = isCompleted ? Colors.black54 : Colors.grey.shade400;
+
+
+            return Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Column(
+                  mainAxisAlignment: MainAxisAlignment.start,
+                  crossAxisAlignment: CrossAxisAlignment.center,
+                  children: [
+                    AnimatedContainer(
+                      duration: const Duration(milliseconds: 300),
+                      width: 30, // Correção: Removido width duplicado
+                      height: 30, // Correção: Removido height duplicado
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        color: circleColor,
+                        border: Border.all(
+                          color: borderColor,
+                          width: 2, // Correção: Removido width duplicado
+                        ),
+                      ),
+                      child: Center(
+                        child: isCompleted
+                            ? const Icon(
+                          Icons.check_rounded,
+                          size: 16,
+                          color: Colors.white,
+                        )
+                            : isCurrent
+                            ? Container( // Ponto para o status atual não concluído
+                          width: 10,
+                          height: 10,
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            color: Colors.pink.shade300,
+                          ),
+                        )
+                            : null, // Nada para status futuros
+                      ),
+                    ),
+                    if (index < _statusSequence.length - 1)
+                      AnimatedContainer(
+                        duration: const Duration(milliseconds: 300),
+                        width: 2,  // Correção: Removido width duplicado
+                        height: 50, // Correção: Removido height duplicado
+                        margin: const EdgeInsets.symmetric(vertical: 4.0),
+                        color: lineColor,
+                      ),
+                  ],
+                ),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: Padding(
+                    padding: const EdgeInsets.only(top: 4.0, bottom: 8.0),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Text(
+                          _capitalize(_statusSequence[index]),
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: titleWeight,
+                            color: titleColor,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          _getStatusDescription(_statusSequence[index]),
+                          style: TextStyle(
+                            fontSize: 13,
+                            color: descriptionColor,
+                            height: 1.3,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
+            );
+          }),
+        ),
+      ),
     );
   }
 
   String _getStatusDescription(String status) {
     switch (status) {
       case 'enviado':
-        return 'Seu pedido foi recebido com sucesso.';
-      case 'Em preparo':
-        return 'Estamos preparando seu pedido com carinho.';
+        return 'Confirmamos o seu pedido e ele já foi enviado para a cozinha.';
+      case 'em preparo':
+        return 'Nossos chefs estão preparando seu pedido com todo o carinho.';
       case 'saiu para entrega':
-        return 'Seu pedido está a caminho!';
+        return 'Seu pedido saiu e está a caminho. Prepare-se!';
       case 'entregue':
-        return 'Pedido entregue. Aproveite!';
+        return 'Seu pedido foi entregue! Esperamos que você aproveite!';
       default:
-        return '';
+        return 'Aguardando informações sobre o pedido.'; // Adicionado um fallback
     }
   }
 }
